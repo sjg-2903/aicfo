@@ -15,6 +15,7 @@ import {
   Lightbulb,
   Bell,
   FileBarChart,
+  History,
   Building2,
   Settings,
   X,
@@ -44,6 +45,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/recommendations', label: 'Recommendations', icon: Lightbulb, group: 'Actions' },
   { to: '/alerts', label: 'Alerts', icon: Bell, group: 'Actions' },
   { to: '/reports', label: 'Reports', icon: FileBarChart, group: 'Actions' },
+  { to: '/history', label: 'History', icon: History, group: 'Actions' },
 ];
 
 const SETTINGS_ITEMS: NavItem[] = [

@@ -75,6 +75,14 @@ _INDEXES: dict[str, list] = {
         ("audit_business_created", [("business_id", 1), ("created_at", -1)], False),
         ("audit_user", [("user_id", 1)], False),
     ],
+    COLLECTIONS["history_events"]: [
+        ("history_business_created", [("business_id", 1), ("created_at", -1)], False),
+        ("history_business_type", [("business_id", 1), ("event_type", 1), ("created_at", -1)], False),
+    ],
+    COLLECTIONS["reports"]: [
+        ("reports_business_created", [("business_id", 1), ("created_at", -1)], False),
+        ("reports_business_type", [("business_id", 1), ("report_type", 1)], False),
+    ],
 }
 
 

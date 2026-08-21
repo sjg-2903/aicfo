@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Trash2 } from 'lucide-react';
+import { Plus, Search, Trash2, Upload } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Card, PageHeader, ChartCard, ErrorState } from '@/components/ui';
 import { Modal } from '@/components/Modal';
+import UploadWizard from '@/components/UploadWizard';
 import { useToast } from '@/components/Toast';
 import { DataTable, Pagination, type Column } from '@/components/DataTable';
 import { CURRENCY, moneyTooltip } from '@/lib/format';
@@ -29,6 +30,7 @@ export default function Expenses() {
   const [page, setPage] = useState(1);
   const [sorting, setSorting] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
   const [showAdd, setShowAdd] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
 
   const all = expenses || [];
 
@@ -109,9 +111,14 @@ export default function Expenses() {
         title="Expenses"
         subtitle="Monitor and categorize business spending"
         actions={
-          <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition shadow-sm">
-            <Plus className="w-4 h-4" /> Add Expense
-          </button>
+          <>
+            <button onClick={() => setShowUpload(true)} className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium transition">
+              <Upload className="w-4 h-4" /> Upload
+            </button>
+            <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition shadow-sm">
+              <Plus className="w-4 h-4" /> Add Expense
+            </button>
+          </>
         }
       />
 
@@ -174,6 +181,18 @@ export default function Expenses() {
       </Card>
 
       <AddExpenseModal open={showAdd} onClose={() => setShowAdd(false)} onSubmit={(p) => createMutation.mutate(p)} submitting={createMutation.isPending} />
+
+      <UploadWizard
+        entity="expenses"
+        open={showUpload}
+        onClose={() => setShowUpload(false)}
+        onComplete={() => {
+          qc.invalidateQueries({ queryKey: ['expenses'] });
+          qc.invalidateQueries({ queryKey: ['expense-distribution'] });
+          qc.invalidateQueries({ queryKey: ['history'] });
+          qc.invalidateQueries({ queryKey: ['dashboard-recommendations'] });
+        }}
+      />
     </div>
   );
 }

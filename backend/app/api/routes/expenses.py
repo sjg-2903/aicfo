@@ -9,7 +9,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.api.deps import get_current_business, get_current_user, get_db
 from app.api.response import ok, ok_page
 from app.schemas.finance import ExpenseCreate, ExpenseUpdate
-from app.services import expense_service, import_service
+from app.services import expense_service, history_service, import_service
 from app.services.audit_service import record
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
@@ -54,6 +54,16 @@ async def import_expenses(
 ):
     result = await import_service.handle_upload(db, business["_id"], user["_id"], "expenses", file)
     await record(db, business_id=business["_id"], user_id=user["_id"], action="import", entity="expense", meta=result)
+    await history_service.record_event(
+        db,
+        business_id=business["_id"],
+        user_id=user["_id"],
+        event_type="import",
+        entity="expenses",
+        status="success" if result["failed_rows"] == 0 else "partial",
+        message=f"Imported {result['successful_rows']} of {result['total_rows']} rows from {file.filename or 'file'}",
+        details={"file_name": file.filename or "", **result},
+    )
     return ok(result, "Import complete")
 
 

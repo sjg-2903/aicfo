@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Banknote, CalendarClock, CheckCircle2 } from 'lucide-react';
+import { Banknote, CalendarClock, CheckCircle2, Upload } from 'lucide-react';
 import { Card, PageHeader, Pill, ProgressBar, ErrorState } from '@/components/ui';
 import { useToast } from '@/components/Toast';
+import UploadWizard from '@/components/UploadWizard';
 import { DataTable, type Column } from '@/components/DataTable';
 import { CURRENCY } from '@/lib/format';
 import { getErrorMessage } from '@/lib/axios';
@@ -18,6 +19,7 @@ export default function Loans() {
   });
 
   const [sorting, setSorting] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'outstanding', direction: 'desc' });
+  const [showUpload, setShowUpload] = useState(false);
 
   const markEmiMutation = useMutation({
     mutationFn: (id: string) => loanService.markEMIPaid(id),
@@ -67,7 +69,15 @@ export default function Loans() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Loans" subtitle="Track loans, EMIs and repayment progress" />
+      <PageHeader
+        title="Loans"
+        subtitle="Track loans, EMIs and repayment progress"
+        actions={
+          <button onClick={() => setShowUpload(true)} className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium transition">
+            <Upload className="w-4 h-4" /> Upload
+          </button>
+        }
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="p-5 hover">
@@ -118,6 +128,18 @@ export default function Loans() {
           <DataTable columns={columns} data={sorted} keyExtractor={(l) => l.id} sorting={sorting} onSort={handleSort} loading={isLoading} emptyTitle="No loans found" />
         )}
       </Card>
+
+      <UploadWizard
+        entity="loans"
+        open={showUpload}
+        onClose={() => setShowUpload(false)}
+        onComplete={() => {
+          qc.invalidateQueries({ queryKey: ['loans'] });
+          qc.invalidateQueries({ queryKey: ['dashboard-summary'] });
+          qc.invalidateQueries({ queryKey: ['history'] });
+          qc.invalidateQueries({ queryKey: ['dashboard-recommendations'] });
+        }}
+      />
     </div>
   );
 }

@@ -1,9 +1,12 @@
-"""CSV import pipeline for transactions, invoices, expenses, GST and loans.
+"""Import pipeline for transactions, invoices, expenses, GST and loans.
 
 The pipeline: validate file type → validate headers → validate data types and
 business rules → normalize → detect duplicates (in-file and in DB) → insert
 valid records → return `total_rows`, `successful_rows`, `failed_rows`,
 `duplicates` and `errors`.
+
+Supports CSV and Excel (.xlsx) files. The same row pipeline is also reused by
+the document-extraction confirmation flow (see ``process_rows``).
 """
 
 import csv
@@ -18,11 +21,10 @@ from app.core.config import settings
 from app.core.constants import COLLECTIONS, EXPENSE, GST_STATUSES, INCOME, INVOICE_STATUSES, LOAN_STATUSES
 from app.core.errors import BadRequestError, ValidationError
 from app.utils.dates import parse_datetime, utcnow
-from app.utils.serialize import serialize_docs
 
 MAX_FILE_BYTES = 10 * 1024 * 1024  # 10 MB
 
-_IMPORT_TYPES = {
+IMPORT_TYPES = {
     "transactions": {
         "collection": COLLECTIONS["transactions"],
         "required": ["date", "description", "amount", "type"],
@@ -49,6 +51,16 @@ _IMPORT_TYPES = {
         "optional": ["loan_type", "outstanding_amount", "interest_rate", "emi_amount", "start_date", "end_date", "next_emi_date", "status"],
     },
 }
+
+TABULAR_EXTENSIONS = {".csv", ".xlsx"}
+
+
+def allowed_fields(import_type: str) -> set[str]:
+    """All field names accepted for an import type (used to sanitize input)."""
+    config = IMPORT_TYPES.get(import_type)
+    if not config:
+        return set()
+    return set(config["required"]) | set(config["optional"])
 
 
 def _fp(*parts: Any) -> str:
@@ -83,10 +95,10 @@ def _normalize_row(row: dict, import_type: str, row_no: int) -> tuple[dict, list
     now = utcnow()
 
     def req(name: str):
-        return (row.get(name) or "").strip()
+        return str(row.get(name) or "").strip()
 
     def opt(name: str):
-        return (row.get(name) or "").strip()
+        return str(row.get(name) or "").strip()
 
     if import_type == "transactions":
         ttype = req("type").lower()
@@ -323,39 +335,77 @@ def _normalize_row(row: dict, import_type: str, row_no: int) -> tuple[dict, list
     return doc, errors, fingerprint, dup_query
 
 
-async def import_csv(
+def _read_tabular(content: bytes, filename: str) -> tuple[list[str], list[dict]]:
+    """Read a CSV or Excel (.xlsx) file into (fieldnames, rows).
+
+    Every cell is kept as a string so the shared normalization pipeline treats
+    Excel and CSV input identically.
+    """
+    ext = ("." + (filename or "").lower().rsplit(".", 1)[-1]) if "." in (filename or "") else ""
+    if ext == ".csv":
+        try:
+            text = content.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            try:
+                text = content.decode("latin-1")
+            except UnicodeDecodeError:
+                raise BadRequestError("File is not valid UTF-8 text", error_code="IMPORT_INVALID_FILE")
+        reader = csv.DictReader(io.StringIO(text))
+        if not reader.fieldnames:
+            raise BadRequestError("CSV appears to be empty", error_code="IMPORT_INVALID_FILE")
+        fieldnames = list(reader.fieldnames)
+        rows = [dict(row) for row in reader]
+        return fieldnames, rows
+
+    if ext == ".xlsx":
+        try:
+            import pandas as pd
+        except ImportError:  # pragma: no cover - dependency guard
+            raise BadRequestError(
+                "Excel support is not installed on this server", error_code="IMPORT_INVALID_FILE"
+            )
+        try:
+            frame = pd.read_excel(io.BytesIO(content), engine="openpyxl", dtype=str)
+        except Exception:
+            raise BadRequestError(
+                "Could not read the Excel file — it may be corrupt or password-protected",
+                error_code="IMPORT_INVALID_FILE",
+            )
+        if frame.empty:
+            raise BadRequestError("Excel file appears to be empty", error_code="IMPORT_INVALID_FILE")
+        fieldnames = [str(c).strip() for c in frame.columns]
+        rows = [
+            {str(k).strip(): ("" if v is None else str(v).strip()) for k, v in row.items()}
+            for row in frame.to_dict(orient="records")
+        ]
+        return fieldnames, rows
+
+    raise BadRequestError(
+        "Only CSV and Excel (.xlsx) files are accepted", error_code="IMPORT_INVALID_FILE"
+    )
+
+
+async def process_rows(
     db: AsyncIOMotorDatabase,
     business_id: Any,
-    user_id: Any,
     import_type: str,
-    content: bytes,
-    filename: str,
+    rows: list[dict],
+    *,
+    start_row_no: int = 1,
 ) -> dict:
-    config = _IMPORT_TYPES.get(import_type)
+    """Validate, normalize, deduplicate and insert raw rows for an import type.
+
+    ``rows`` is a list of string-keyed dicts (CSV rows, Excel rows, or rows
+    confirmed by the user after document extraction). Every row is validated
+    with the same business rules; duplicates are detected both within the batch
+    and against existing business records.
+    """
+    config = IMPORT_TYPES.get(import_type)
     if not config:
         raise BadRequestError(
-            f"Unsupported import type '{import_type}'. Expected one of: {', '.join(_IMPORT_TYPES)}",
+            f"Unsupported import type '{import_type}'. Expected one of: {', '.join(IMPORT_TYPES)}",
             error_code="IMPORT_INVALID_TYPE",
         )
-    if not (filename or "").lower().endswith(".csv"):
-        raise BadRequestError("Only CSV files are accepted", error_code="IMPORT_INVALID_FILE")
-    if len(content) > MAX_FILE_BYTES:
-        raise BadRequestError("File exceeds the 10 MB limit", error_code="PAYLOAD_TOO_LARGE", status_code=413)
-
-    try:
-        text = content.decode("utf-8-sig")
-    except UnicodeDecodeError:
-        try:
-            text = content.decode("latin-1")
-        except UnicodeDecodeError:
-            raise BadRequestError("File is not valid UTF-8 text", error_code="IMPORT_INVALID_FILE")
-
-    reader = csv.DictReader(io.StringIO(text))
-    if not reader.fieldnames:
-        raise BadRequestError("CSV appears to be empty", error_code="IMPORT_INVALID_FILE")
-    _validate_headers(reader.fieldnames, config["required"])
-
-    rows = list(reader)
     if len(rows) > settings.MAX_IMPORT_ROWS:
         raise BadRequestError(
             f"File has {len(rows)} rows; the maximum is {settings.MAX_IMPORT_ROWS}",
@@ -372,8 +422,11 @@ async def import_csv(
     seen_fingerprints: set[str] = set()
     valid_docs: list[dict] = []
 
-    for idx, raw_row in enumerate(rows, start=2):  # header is row 1
-        row = {k.strip().lower(): (v or "") for k, v in raw_row.items()}
+    for idx, raw_row in enumerate(rows, start=start_row_no):
+        row = {
+            str(k).strip().lower(): (v if isinstance(v, str) else (str(v) if v is not None else ""))
+            for k, v in raw_row.items()
+        }
         doc, row_errors, fingerprint, dup_query = _normalize_row(row, import_type, idx)
 
         if row_errors:
@@ -424,6 +477,56 @@ async def import_csv(
     }
 
 
+async def import_csv(
+    db: AsyncIOMotorDatabase,
+    business_id: Any,
+    user_id: Any,
+    import_type: str,
+    content: bytes,
+    filename: str,
+) -> dict:
+    config = IMPORT_TYPES.get(import_type)
+    if not config:
+        raise BadRequestError(
+            f"Unsupported import type '{import_type}'. Expected one of: {', '.join(IMPORT_TYPES)}",
+            error_code="IMPORT_INVALID_TYPE",
+        )
+    if not (filename or "").lower().endswith(".csv"):
+        raise BadRequestError("Only CSV files are accepted", error_code="IMPORT_INVALID_FILE")
+    if len(content) > MAX_FILE_BYTES:
+        raise BadRequestError("File exceeds the 10 MB limit", error_code="PAYLOAD_TOO_LARGE", status_code=413)
+    fieldnames, rows = _read_tabular(content, filename)
+    _validate_headers(fieldnames, config["required"])
+    return await process_rows(db, business_id, import_type, rows, start_row_no=2)
+
+
+async def import_file(
+    db: AsyncIOMotorDatabase,
+    business_id: Any,
+    user_id: Any,
+    import_type: str,
+    content: bytes,
+    filename: str,
+) -> dict:
+    """Import a CSV or Excel file through the full pipeline."""
+    config = IMPORT_TYPES.get(import_type)
+    if not config:
+        raise BadRequestError(
+            f"Unsupported import type '{import_type}'. Expected one of: {', '.join(IMPORT_TYPES)}",
+            error_code="IMPORT_INVALID_TYPE",
+        )
+    ext = ("." + (filename or "").lower().rsplit(".", 1)[-1]) if "." in (filename or "") else ""
+    if ext not in TABULAR_EXTENSIONS:
+        raise BadRequestError(
+            "Only CSV and Excel (.xlsx) files are accepted", error_code="IMPORT_INVALID_FILE"
+        )
+    if len(content) > MAX_FILE_BYTES:
+        raise BadRequestError("File exceeds the 10 MB limit", error_code="PAYLOAD_TOO_LARGE", status_code=413)
+    fieldnames, rows = _read_tabular(content, filename)
+    _validate_headers(fieldnames, config["required"])
+    return await process_rows(db, business_id, import_type, rows, start_row_no=2)
+
+
 async def handle_upload(
     db: AsyncIOMotorDatabase,
     business_id: Any,
@@ -431,6 +534,6 @@ async def handle_upload(
     import_type: str,
     file,
 ) -> dict:
-    """Read an uploaded CSV file and run it through the import pipeline."""
+    """Read an uploaded CSV/Excel file and run it through the import pipeline."""
     content = await file.read()
-    return await import_csv(db, business_id, user_id, import_type, content, file.filename or "")
+    return await import_file(db, business_id, user_id, import_type, content, file.filename or "")

@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, CheckCircle2, Trash2 } from 'lucide-react';
+import { Plus, Search, CheckCircle2, Trash2, Upload } from 'lucide-react';
 import { Card, PageHeader, Pill, ErrorState } from '@/components/ui';
 import { Modal } from '@/components/Modal';
+import UploadWizard from '@/components/UploadWizard';
 import { useToast } from '@/components/Toast';
 import { DataTable, Pagination, type Column } from '@/components/DataTable';
 import { CURRENCY } from '@/lib/format';
@@ -25,6 +26,7 @@ export default function Invoices() {
   const [page, setPage] = useState(1);
   const [sorting, setSorting] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
   const [showAdd, setShowAdd] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
 
   const all = invoices || [];
 
@@ -133,9 +135,14 @@ export default function Invoices() {
         title="Invoices & Receivables"
         subtitle="Manage invoices and track payments"
         actions={
-          <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition shadow-sm">
-            <Plus className="w-4 h-4" /> New Invoice
-          </button>
+          <>
+            <button onClick={() => setShowUpload(true)} className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium transition">
+              <Upload className="w-4 h-4" /> Upload
+            </button>
+            <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition shadow-sm">
+              <Plus className="w-4 h-4" /> New Invoice
+            </button>
+          </>
         }
       />
 
@@ -184,6 +191,18 @@ export default function Invoices() {
       </Card>
 
       <AddInvoiceModal open={showAdd} onClose={() => setShowAdd(false)} onSubmit={(p) => createMutation.mutate(p)} submitting={createMutation.isPending} />
+
+      <UploadWizard
+        entity="invoices"
+        open={showUpload}
+        onClose={() => setShowUpload(false)}
+        onComplete={() => {
+          qc.invalidateQueries({ queryKey: ['invoices'] });
+          qc.invalidateQueries({ queryKey: ['dashboard-summary'] });
+          qc.invalidateQueries({ queryKey: ['history'] });
+          qc.invalidateQueries({ queryKey: ['dashboard-recommendations'] });
+        }}
+      />
     </div>
   );
 }

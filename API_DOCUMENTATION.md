@@ -1978,3 +1978,133 @@ Currently on API version 1. Future versions may be released under:
   - Reports
   - Business profile management
 
+
+---
+
+# Document Upload, Extraction & History (v1.1.0)
+
+## Upload & Document Extraction Endpoints
+
+Base: `POST /api/uploads/*`
+
+### Extract financial fields from an image/PDF
+
+**POST** `/api/uploads/extract?import_type={transactions|invoices|expenses|gst|loans}`
+
+Multipart upload (`file`). Extracts candidate rows from a PDF (text layer), an image
+(Gemini vision when configured, otherwise Tesseract OCR when installed, otherwise a
+manual-entry fallback). **Nothing is stored in the database** — the caller must show
+the rows to the user for review.
+
+```json
+{
+  "success": true,
+  "data": {
+    "file_name": "invoice-scan.pdf",
+    "import_type": "invoices",
+    "method": "gemini | tesseract | heuristics | manual",
+    "confidence": "high | medium | low",
+    "rows": [{ "invoice_number": "INV-77", "total_amount": "42500", "...": "..." }],
+    "raw_text": "…(truncated)…",
+    "row_count": 2,
+    "note": "…guidance for the review step…"
+  }
+}
+```
+
+### Confirm extracted rows (the only path that inserts data)
+
+**POST** `/api/uploads/extracted/confirm`
+
+```json
+{
+  "import_type": "invoices",
+  "file_name": "invoice-scan.pdf",
+  "rows": [
+    { "invoice_number": "INV-77", "customer_name": "Acme", "invoice_date": "2026-08-01",
+      "due_date": "2026-08-31", "total_amount": 42500, "paid_amount": 0, "status": "sent" }
+  ]
+}
+```
+
+Rows are validated with the same business rules as CSV import (dates, amounts, statuses),
+deduplicated against the business's existing records, and inserted. Returns the standard
+import summary (`total_rows`, `successful_rows`, `failed_rows`, `duplicates`, `errors`).
+
+## Enhanced CSV/Excel Import
+
+`POST /api/{transactions|invoices|expenses|gst|loans}/import` now accepts **`.xlsx`**
+files in addition to `.csv` (single sheet, first sheet used, same column names).
+Duplicates and invalid rows are reported per-row as before.
+
+## History Endpoints
+
+### Unified activity timeline
+
+**GET** `/api/history?page=1&limit=20&event_type=&status=&search=`
+
+Returns a merged, business-scoped timeline of:
+
+| `event_type`      | Source                                            |
+|-------------------|---------------------------------------------------|
+| `import`          | CSV/Excel imports and confirmed document imports   |
+| `extraction`      | image/PDF document extraction runs                 |
+| `report`          | generated PDF reports (with `report_id` to download) |
+| `recommendations` | AI recommendation generation runs                  |
+| `record`          | entity create/update/delete from the audit trail   |
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "…", "event_type": "report", "entity": "report", "status": "success",
+      "message": "Generated Comprehensive Financial Report",
+      "details": { "filename": "aicfo-…-20260821.pdf", "size_bytes": 11715 },
+      "report_id": "6a88…", "created_at": "2026-08-21T20:02:25.163447"
+    }
+  ],
+  "page": 1, "limit": 20, "total": 7, "pages": 1
+}
+```
+
+## PDF Report Endpoints
+
+### Generate & store a PDF report
+
+**POST** `/api/reports/pdf` — body `{ "report_type": "comprehensive" | "financial_summary" | "cash_flow" | "risk" }`
+
+Builds a branded PDF (KPI tables, health score, vector charts, GST/loans/risk sections,
+AI recommendations, executive summary) from live business data, stores it in MongoDB
+and returns `{ id, title, report_type, filename, size_bytes, generated_at }`.
+
+### List generated PDFs
+
+**GET** `/api/reports/pdf` — metadata only, newest first.
+
+### Download a PDF
+
+**GET** `/api/reports/pdf/{report_id}` — `application/pdf` (business-scoped; 404 for
+other businesses, 401 unauthenticated).
+
+### Delete a PDF
+
+**DELETE** `/api/reports/pdf/{report_id}`
+
+## Dashboard AI Recommendations
+
+**GET** `/api/recommendations/dashboard?limit=6`
+
+Fresh (unpersisted) data-driven recommendations for the Dashboard, sorted by priority,
+covering receivables, cash flow, spending trends, cost saving, GST, loans, health and
+priorities. Includes an optional `narrative` (Gemini when configured, deterministic
+otherwise) and the `engine` used.
+
+## Changelog
+
+- **v1.1.0** - Uploads, document extraction, PDF reports & history
+  - CSV **and Excel** imports on every finance module
+  - Image/PDF extraction with editable review + explicit confirm (no silent inserts)
+  - Real PDF report generation (reportlab) with charts, metrics and AI recommendations
+  - Unified activity History feed with report re-download
+  - Dashboard AI Recommendations section (data-driven, priority-ranked)
