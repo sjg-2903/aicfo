@@ -40,6 +40,8 @@ export interface ExpenseRow {
 export interface GstRow {
   id: string;
   period: string;
+  periodStart: string;
+  periodEnd: string;
   dueDate: string;
   taxable: number;
   taxAmount: number;
@@ -51,6 +53,8 @@ export interface LoanRow {
   id: string;
   lender: string;
   type: string;
+  startDate: string;
+  endDate: string;
   principal: number;
   outstanding: number;
   rate: number;
@@ -136,8 +140,8 @@ export function shortMonth(key: string): string {
 interface RawTxn { id: string; date: string; description: string; amount: number; type: string; category: string; payment_method: string; }
 interface RawInvoice { id: string; invoice_number: string; customer_name: string; invoice_date: string; due_date: string; total_amount: number; paid_amount: number; status: string; }
 interface RawExpense { id: string; date: string; description: string; category: string; vendor: string; amount: number; payment_method: string; recurring: boolean; }
-interface RawGst { id: string; period: string; due_date: string; taxable_turnover: number; tax_amount: number; paid_amount: number; status: string; }
-interface RawLoan { id: string; lender: string; loan_type: string; principal_amount: number; outstanding_amount: number; interest_rate: number; emi_amount: number; next_emi_date: string | null; status: string; }
+interface RawGst { id: string; period: string; period_start?: string; period_end?: string; due_date: string; taxable_turnover: number; tax_amount: number; paid_amount: number; status: string; }
+interface RawLoan { id: string; lender: string; loan_type: string; start_date?: string; end_date?: string; principal_amount: number; outstanding_amount: number; interest_rate: number; emi_amount: number; next_emi_date: string | null; status: string; }
 interface RawRisk { id: string; type: string; severity: string; status?: string; impact?: number; title: string; evidence: string; recommended_action: string; }
 interface RawFactor { name: string; score: number; weight: number; status?: string; }
 interface RawRecommendation { id: string; title: string; description: string; recommended_action?: string; expected_impact?: string; priority: string; status: string; source_agent: string; created_at: string; category: string; }
@@ -186,6 +190,8 @@ export function mapGst(raw: RawGst): GstRow {
   return {
     id: raw.id,
     period: raw.period,
+    periodStart: d(raw.period_start),
+    periodEnd: d(raw.period_end),
     dueDate: d(raw.due_date),
     taxable: raw.taxable_turnover,
     taxAmount: raw.tax_amount,
@@ -199,6 +205,8 @@ export function mapLoan(raw: RawLoan): LoanRow {
     id: raw.id,
     lender: raw.lender,
     type: raw.loan_type || 'Loan',
+    startDate: d(raw.start_date),
+    endDate: d(raw.end_date),
     principal: raw.principal_amount,
     outstanding: raw.outstanding_amount,
     rate: raw.interest_rate,

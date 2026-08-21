@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Lightbulb, TrendingUp, X, Sparkles } from 'lucide-react';
+import { Lightbulb, TrendingUp, X, Sparkles, Trash2 } from 'lucide-react';
 import { Card, PageHeader, Pill, ErrorState } from '@/components/ui';
 import { useToast } from '@/components/Toast';
 import { getErrorMessage } from '@/lib/axios';
 import recommendationService from '@/services/recommendationService';
+import type { RecommendationRow } from '@/lib/mappers';
 
 const PRIORITY_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 
@@ -23,9 +24,32 @@ export default function Recommendations() {
   const generateMutation = useMutation({
     mutationFn: () => recommendationService.generate(),
     onSuccess: (generated) => {
+      const known = new Set((qc.getQueryData<RecommendationRow[]>(['recommendations']) || []).map((r) => r.id));
+      const fresh = generated.filter((r) => !known.has(r.id)).length;
+
+      // Show the freshly generated payload immediately, then reconcile with the server.
+      if (generated.length > 0) qc.setQueryData(['recommendations'], generated);
       qc.invalidateQueries({ queryKey: ['recommendations'] });
-      if (generated.length > 0) addToast(`Generated ${generated.length} recommendations`, 'success');
-      else addToast('Recommendations are already up to date', 'info');
+      qc.invalidateQueries({ queryKey: ['dashboard-recommendations'] });
+      qc.invalidateQueries({ queryKey: ['history'] });
+
+      // Reveal whatever was just generated instead of hiding it behind stale filters.
+      setPriorityFilter('all');
+      setAgentFilter('all');
+
+      if (fresh > 0) addToast(`Generated ${fresh} new recommendation${fresh > 1 ? 's' : ''}`, 'success');
+      else if (generated.length > 0) addToast(`Refreshed ${generated.length} recommendations — no new items found`, 'info');
+      else addToast('No recommendations could be generated yet. Add financial data first.', 'info');
+    },
+    onError: (e) => addToast(getErrorMessage(e), 'error'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => recommendationService.remove(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['recommendations'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-recommendations'] });
+      addToast('Recommendation deleted', 'success');
     },
     onError: (e) => addToast(getErrorMessage(e), 'error'),
   });
@@ -160,8 +184,19 @@ export default function Recommendations() {
                         onClick={() => actionMutation.mutate({ id: rec.id, action: 'dismiss' })}
                         className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"
                         aria-label="Dismiss"
+                        title="Dismiss"
                       >
                         <X className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm('Delete this recommendation permanently?')) deleteMutation.mutate(rec.id);
+                        }}
+                        className="p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition"
+                        aria-label="Delete"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>

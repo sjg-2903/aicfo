@@ -360,12 +360,36 @@ async def _build_recommendations(
     return out
 
 
+def _onboarding_recommendation() -> dict:
+    """Fallback so an explicit "Generate" never yields an empty result set."""
+    return {
+        "category": "onboarding",
+        "title": "Add your financial data to unlock AI insights",
+        "description": (
+            "The AI CFO analyses transactions, invoices, expenses, GST filings and loans. "
+            "There is not enough recorded activity yet to detect risks or opportunities."
+        ),
+        "reason": "Recommendations are computed from your own recorded financial data.",
+        "priority": "medium",
+        "status": "new",
+        "recommended_action": (
+            "Add or upload at least one month of transactions, invoices and expenses, "
+            "then run Generate again."
+        ),
+        "expected_impact": "Unlocks risk, cash-flow and loan-readiness recommendations",
+        "impact_value": 0,
+        "source_agent": "AI CFO",
+    }
+
+
 async def generate_recommendations(
     db: AsyncIOMotorDatabase, business_id: Any, now: Optional[datetime] = None,
 ) -> list[dict]:
     """Build recommendation documents (the persistable shape with ``_rid``)."""
     now = now or utcnow()
     recs = await _build_recommendations(db, business_id, now)
+    if not recs:
+        recs = [_onboarding_recommendation()]
     out: list[dict] = []
     for r in recs:
         doc = dict(r)
