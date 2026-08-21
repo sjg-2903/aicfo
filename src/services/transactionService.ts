@@ -1,108 +1,46 @@
 import apiClient from '@/lib/axios';
+import { mapTransaction, type TxnRow } from '@/lib/mappers';
 
 /**
- * Transaction Service
- * 
- * API Documentation:
- * - GET /api/transactions - Get transactions with pagination, filtering, sorting
- * - GET /api/transactions/{id} - Get transaction details
- * - POST /api/transactions - Create new transaction
- * - PUT /api/transactions/{id} - Update transaction
- * - DELETE /api/transactions/{id} - Delete transaction
- * - POST /api/transactions/import - Import transactions from CSV
+ * Transaction Service — backed by FastAPI
+ *  - GET    /api/transactions
+ *  - POST   /api/transactions
+ *  - PUT    /api/transactions/{id}
+ *  - DELETE /api/transactions/{id}
+ *  - POST   /api/transactions/import
  */
-
-export interface Transaction {
-  id: string;
-  date: string;
-  description: string;
-  amount: number;
-  type: 'income' | 'expense';
-  category: string;
-  payment_method: string;
-  reference_id?: string;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface TransactionListResponse {
-  data: Transaction[];
-  total: number;
-  page: number;
-  page_size: number;
-  total_pages: number;
-}
-
-export interface TransactionFilter {
-  type?: 'income' | 'expense';
-  category?: string;
-  start_date?: string;
-  end_date?: string;
-  payment_method?: string;
-}
 
 export interface TransactionCreateRequest {
   date: string;
   description: string;
   amount: number;
   type: 'income' | 'expense';
-  category: string;
-  payment_method: string;
-  reference_id?: string;
+  category?: string;
+  payment_method?: string;
   notes?: string;
 }
 
-export interface TransactionUpdateRequest extends Partial<TransactionCreateRequest> {}
+const LIMIT = 500;
 
 class TransactionService {
-  async getTransactions(
-    page: number = 1,
-    page_size: number = 20,
-    filters?: TransactionFilter,
-    sort_by: string = 'date',
-    sort_order: 'asc' | 'desc' = 'desc'
-  ): Promise<TransactionListResponse> {
-    const response = await apiClient.get('/api/transactions', {
-      params: {
-        page,
-        page_size,
-        ...filters,
-        sort_by,
-        sort_order,
-      },
-    });
-    return response.data;
+  async getTransactions(): Promise<TxnRow[]> {
+    const response = await apiClient.get('/api/transactions', { params: { page: 1, limit: LIMIT, sort_by: 'date', sort_order: 'desc' } });
+    const rows: unknown[] = Array.isArray(response.data) ? response.data : [];
+    return rows.map((r) => mapTransaction(r as Parameters<typeof mapTransaction>[0]));
   }
 
-  async getTransaction(id: string): Promise<Transaction> {
-    const response = await apiClient.get(`/api/transactions/${id}`);
-    return response.data;
-  }
-
-  async createTransaction(data: TransactionCreateRequest): Promise<Transaction> {
+  async createTransaction(data: TransactionCreateRequest): Promise<TxnRow> {
     const response = await apiClient.post('/api/transactions', data);
-    return response.data;
+    return mapTransaction(response.data);
   }
 
-  async updateTransaction(id: string, data: TransactionUpdateRequest): Promise<Transaction> {
+  async updateTransaction(id: string, data: Partial<TransactionCreateRequest>): Promise<TxnRow> {
     const response = await apiClient.put(`/api/transactions/${id}`, data);
-    return response.data;
+    return mapTransaction(response.data);
   }
 
   async deleteTransaction(id: string): Promise<void> {
     await apiClient.delete(`/api/transactions/${id}`);
-  }
-
-  async importTransactions(file: File): Promise<{ imported_count: number }> {
-    const formData = new FormData();
-    formData.append('file', file);
-    const response = await apiClient.post('/api/transactions/import', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
   }
 }
 

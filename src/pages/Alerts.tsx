@@ -1,8 +1,11 @@
 import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Bell, AlertOctagon, AlertTriangle, Info } from 'lucide-react';
-import { Card, PageHeader, Pill } from '@/components/ui';
-import { mockAlerts } from '@/mock';
+import { Card, PageHeader, Pill, ErrorState } from '@/components/ui';
+import { useToast } from '@/components/Toast';
+import { getErrorMessage } from '@/lib/axios';
+import alertService from '@/services/alertService';
 
 const SEVERITY_STYLE: Record<string, { icon: React.ElementType; color: string; bar: string }> = {
   critical: { icon: AlertOctagon, color: 'text-red-600 bg-red-50', bar: 'bg-red-500' },
@@ -13,18 +16,30 @@ const SEVERITY_STYLE: Record<string, { icon: React.ElementType; color: string; b
 };
 
 export default function Alerts() {
-  const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
-  const [alerts, setAlerts] = useState(mockAlerts);
+  const qc = useQueryClient();
+  const { addToast } = useToast();
+  const { data: alerts, isLoading, error, refetch } = useQuery({
+    queryKey: ['alerts'],
+    queryFn: () => alertService.getAlerts(),
+  });
 
-  const filtered = alerts.filter((a) => {
+  const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
+
+  const markReadMutation = useMutation({
+    mutationFn: (id: string) => alertService.markAsRead(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['alerts'] });
+      addToast('Alert marked as read', 'success');
+    },
+    onError: (e) => addToast(getErrorMessage(e), 'error'),
+  });
+
+  const all = alerts || [];
+  const filtered = all.filter((a) => {
     if (filter === 'unread') return !a.read;
     if (filter === 'read') return a.read;
     return true;
   });
-
-  const markRead = (id: string) => {
-    setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, read: true } : a)));
-  };
 
   return (
     <div className="space-y-6">
@@ -42,46 +57,51 @@ export default function Alerts() {
         ))}
       </div>
 
-      <div className="space-y-3">
-        {filtered.map((alert, idx) => {
-          const style = SEVERITY_STYLE[alert.severity] || SEVERITY_STYLE.info;
-          const Icon = style.icon;
-          return (
-            <Card key={alert.id} className="p-4 hover flex items-start gap-4" delay={idx * 40}>
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${style.color}`}>
-                <Icon className="w-5 h-5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                  <h3 className={`text-sm font-semibold ${alert.read ? 'text-slate-500' : 'text-slate-900'}`}>{alert.title}</h3>
-                  <Pill value={alert.severity} />
-                  {!alert.read && <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">NEW</span>}
+      {error ? (
+        <Card>
+          <ErrorState message={getErrorMessage(error)} onRetry={() => refetch()} />
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {filtered.length === 0 && !isLoading && (
+            <Card className="p-12 text-center">
+              <Bell className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-500">No {filter !== 'all' ? filter : ''} alerts.</p>
+            </Card>
+          )}
+          {filtered.map((alert, idx) => {
+            const style = SEVERITY_STYLE[alert.severity] || SEVERITY_STYLE.info;
+            const Icon = style.icon;
+            return (
+              <Card key={alert.id} className="p-4 hover flex items-start gap-4" delay={idx * 40}>
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${style.color}`}>
+                  <Icon className="w-5 h-5" />
                 </div>
-                <p className="text-sm text-slate-600 mb-1">{alert.description}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-400">{alert.date}</span>
-                  <div className="flex items-center gap-3">
-                    {!alert.read && (
-                      <button onClick={() => markRead(alert.id)} className="text-xs font-medium text-blue-600 hover:text-blue-700 transition">
-                        Mark as read
-                      </button>
-                    )}
-                    <Link to={alert.link} className="text-xs font-medium text-slate-500 hover:text-slate-700 transition">
-                      View →
-                    </Link>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                    <h3 className={`text-sm font-semibold ${alert.read ? 'text-slate-500' : 'text-slate-900'}`}>{alert.title}</h3>
+                    <Pill value={alert.severity} />
+                    {!alert.read && <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">NEW</span>}
+                  </div>
+                  <p className="text-sm text-slate-600 mb-1">{alert.description}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-400">{alert.date}</span>
+                    <div className="flex items-center gap-3">
+                      {!alert.read && (
+                        <button onClick={() => markReadMutation.mutate(alert.id)} className="text-xs font-medium text-blue-600 hover:text-blue-700 transition">
+                          Mark as read
+                        </button>
+                      )}
+                      <Link to={alert.link} className="text-xs font-medium text-slate-500 hover:text-slate-700 transition">
+                        View →
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-
-      {filtered.length === 0 && (
-        <Card className="p-12 text-center">
-          <Bell className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500">No {filter !== 'all' ? filter : ''} alerts.</p>
-        </Card>
+              </Card>
+            );
+          })}
+        </div>
       )}
     </div>
   );

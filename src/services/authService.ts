@@ -1,16 +1,12 @@
 import apiClient from '@/lib/axios';
 
 /**
- * Authentication Service
- * 
- * API Documentation:
- * - POST /api/auth/register - Register a new user
- * - POST /api/auth/login - User login
- * - POST /api/auth/logout - User logout
- * - POST /api/auth/refresh - Refresh access token
- * - GET /api/auth/me - Get current user profile
- * - POST /api/auth/forgot-password - Request password reset
- * - POST /api/auth/reset-password - Reset password with token
+ * Authentication Service — backed by FastAPI
+ *  - POST /api/auth/register
+ *  - POST /api/auth/login
+ *  - POST /api/auth/logout
+ *  - POST /api/auth/refresh
+ *  - GET  /api/auth/me
  */
 
 export interface RegisterRequest {
@@ -25,37 +21,26 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface AuthResponse {
-  access_token: string;
-  token_type: string;
-  user: {
-    id: string;
-    email: string;
-    business_name: string;
-    owner_name: string;
-  };
-}
-
-export interface UserProfile {
+export interface AuthUser {
   id: string;
   email: string;
-  business_name: string;
+  role: string;
   owner_name: string;
-  created_at: string;
+  business_id: string | null;
+  created_at?: string;
 }
 
-export interface ForgotPasswordRequest {
-  email: string;
+export interface AuthResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+  user: AuthUser;
 }
 
-export interface ResetPasswordRequest {
-  token: string;
-  password: string;
-}
-
-export interface PasswordResetResponse {
-  message: string;
-}
+const ACCESS_TOKEN_KEY = 'access_token';
+const REFRESH_TOKEN_KEY = 'refresh_token';
+const USER_KEY = 'user';
 
 class AuthService {
   async register(data: RegisterRequest): Promise<AuthResponse> {
@@ -72,41 +57,35 @@ class AuthService {
     await apiClient.post('/api/auth/logout');
   }
 
-  async getCurrentUser(): Promise<UserProfile> {
+  async getCurrentUser(): Promise<AuthUser> {
     const response = await apiClient.get('/api/auth/me');
     return response.data;
   }
 
-  async forgotPassword(data: ForgotPasswordRequest): Promise<PasswordResetResponse> {
-    const response = await apiClient.post('/api/auth/forgot-password', data);
-    return response.data;
-  }
-
-  async resetPassword(data: ResetPasswordRequest): Promise<PasswordResetResponse> {
-    const response = await apiClient.post('/api/auth/reset-password', data);
-    return response.data;
-  }
-
-  async refreshToken(): Promise<AuthResponse> {
-    const response = await apiClient.post('/api/auth/refresh');
-    return response.data;
-  }
-
   saveToken(token: string): void {
-    localStorage.setItem('access_token', token);
+    localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  }
+
+  saveRefreshToken(token: string): void {
+    localStorage.setItem(REFRESH_TOKEN_KEY, token);
+  }
+
+  saveUser(user: AuthUser): void {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
   }
 
   getToken(): string | null {
-    return localStorage.getItem('access_token');
+    return localStorage.getItem(ACCESS_TOKEN_KEY);
   }
 
-  isAuthenticated(): boolean {
-    return !!this.getToken();
+  getRefreshToken(): string | null {
+    return localStorage.getItem(REFRESH_TOKEN_KEY);
   }
 
-  logout_local(): void {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user');
+  clearSession(): void {
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
   }
 }
 

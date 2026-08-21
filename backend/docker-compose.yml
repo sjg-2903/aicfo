@@ -1,0 +1,42 @@
+# Local development stack: MongoDB + FastAPI backend.
+# The backend is never exposed directly on the host except via the API port.
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: aicfo-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1}).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .
+    container_name: aicfo-backend
+    restart: unless-stopped
+    environment:
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DB_NAME: aicfo
+      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-me}
+      ENVIRONMENT: development
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      DEMO_MODE: ${DEMO_MODE:-false}
+    ports:
+      - "8000:8000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health', timeout=5).status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  mongo_data:

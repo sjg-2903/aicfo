@@ -131,6 +131,10 @@ export const KPICard: React.FC<KPICardProps> = ({
           </span>
         </div>
       )}
+
+      {trend === undefined && trendLabel && !loading && (
+        <div className="text-xs text-slate-500">{trendLabel}</div>
+      )}
     </div>
   );
 };

@@ -1,0 +1,20 @@
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30
+motor>=3.5,<4.0
+pymongo>=4.7,<5.0
+pydantic>=2.7,<3.0
+pydantic-settings>=2.3
+email-validator>=2.1
+python-multipart>=0.0.9
+PyJWT>=2.8
+bcrypt>=4.1
+python-dateutil>=2.9
+pandas>=2.2
+numpy>=1.26
+scikit-learn>=1.4
+httpx>=0.27
+
+# Optional: install for Prophet-based forecasting (heavy; requires a C++ toolchain).
+# The service automatically falls back to scikit-learn when Prophet is unavailable.
+# prophet>=1.1
+# cmdstanpy>=1.2

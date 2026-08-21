@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Menu, Bell, Search, ChevronDown, LogOut, Settings, Building2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/utils/cn';
-import { mockAlerts } from '@/mock';
+import alertService from '@/services/alertService';
 
 export default function Topbar({ onMenuToggle }: { onMenuToggle: () => void }) {
   const { user, logout } = useAuth();
@@ -13,7 +14,8 @@ export default function Topbar({ onMenuToggle }: { onMenuToggle: () => void }) {
   const menuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
-  const unreadCount = mockAlerts.filter((a) => !a.read).length;
+  const { data: alerts = [] } = useQuery({ queryKey: ['alerts'], queryFn: () => alertService.getAlerts(), enabled: !!user });
+  const unreadCount = alerts.filter((a) => !a.read).length;
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -84,7 +86,8 @@ export default function Topbar({ onMenuToggle }: { onMenuToggle: () => void }) {
               <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
             </div>
             <div className="max-h-80 overflow-y-auto">
-              {mockAlerts.slice(0, 5).map((alert) => (
+              {alerts.length === 0 && <p className="p-4 text-sm text-slate-400 text-center">No notifications</p>}
+              {alerts.slice(0, 5).map((alert) => (
                 <Link
                   key={alert.id}
                   to={alert.link}

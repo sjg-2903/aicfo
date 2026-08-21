@@ -20,7 +20,14 @@ export default function Landing() {
   const { loginAsDemo, isAuthenticated } = useAuth();
 
   const explore = async () => {
-    if (!isAuthenticated) await loginAsDemo();
+    if (!isAuthenticated) {
+      try {
+        await loginAsDemo();
+      } catch {
+        // If demo login fails (e.g. backend not seeded), the protected route
+        // will redirect to /login where a clear message is shown.
+      }
+    }
   };
 
   return (
