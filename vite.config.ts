@@ -16,4 +16,20 @@ export default defineConfig({
       "@": path.resolve(__dirname, "src"),
     },
   },
+  server: {
+    host: true,
+    allowedHosts: true,
+    // Proxy API calls to the FastAPI backend so the frontend can use
+    // same-origin relative URLs (/api, /health) in development.
+    proxy: {
+      "/api": {
+        target: process.env.VITE_PROXY_TARGET || "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/health": {
+        target: process.env.VITE_PROXY_TARGET || "http://localhost:8000",
+        changeOrigin: true,
+      },
+    },
+  },
 });

@@ -1,72 +1,55 @@
 import apiClient from '@/lib/axios';
 
 /**
- * AI CFO Service
- * 
- * API Documentation:
- * - POST /api/ai-cfo/chat - Send message to AI CFO
- * - GET /api/ai-cfo/conversation - Get conversation history
- * - DELETE /api/ai-cfo/conversation - Clear conversation history
- * - GET /api/ai-cfo/suggested-questions - Get suggested questions
+ * AI CFO Service — backed by FastAPI
+ *  - POST /api/ai-cfo/chat
+ *  - POST /api/ai-cfo/analyze
+ *  - POST /api/ai-cfo/recommend
  */
 
-export interface AIMessage {
-  id: string;
-  role: 'user' | 'assistant';
+export interface ChatReply {
+  sessionId: string;
   content: string;
-  timestamp: string;
-  thinking?: string;
-  sources?: Array<{
-    type: string;
-    reference: string;
-  }>;
+  engine: string;
+  followUps: string[];
 }
 
-export interface AIChatRequest {
-  message: string;
-  context?: Record<string, unknown>;
-}
-
-export interface AIChatResponse {
-  message: AIMessage;
-  suggested_follow_ups?: string[];
-  insights?: Array<{
-    type: string;
-    title: string;
-    description: string;
-  }>;
-}
-
-export interface ConversationHistory {
-  messages: AIMessage[];
-  total_messages: number;
-  created_at: string;
-}
-
-export interface SuggestedQuestion {
-  question: string;
-  category: string;
-  icon?: string;
+export interface AnalyzeResult {
+  narrative: string;
+  metrics: Record<string, unknown>;
+  financialHealth: { score: number; label: string };
+  risk: { risk_score: number; risk_level: string; risks: unknown[] };
+  loanReadiness: { readiness_score: number; label: string };
 }
 
 class AICFOService {
-  async sendMessage(request: AIChatRequest): Promise<AIChatResponse> {
-    const response = await apiClient.post('/api/ai-cfo/chat', request);
-    return response.data;
+  async sendMessage(message: string, sessionId?: string): Promise<ChatReply> {
+    const response = await apiClient.post('/api/ai-cfo/chat', {
+      message,
+      ...(sessionId ? { session_id: sessionId } : {}),
+    });
+    const r = response.data as {
+      session_id: string;
+      engine?: string;
+      suggested_follow_ups?: string[];
+      message: { content: string };
+    };
+    return {
+      sessionId: r.session_id,
+      content: r.message?.content || '',
+      engine: r.engine || 'deterministic',
+      followUps: r.suggested_follow_ups || [],
+    };
   }
 
-  async getConversationHistory(): Promise<ConversationHistory> {
-    const response = await apiClient.get('/api/ai-cfo/conversation');
-    return response.data;
+  async analyze(): Promise<AnalyzeResult> {
+    const response = await apiClient.post('/api/ai-cfo/analyze', {});
+    return response.data as AnalyzeResult;
   }
 
-  async clearConversation(): Promise<void> {
-    await apiClient.delete('/api/ai-cfo/conversation');
-  }
-
-  async getSuggestedQuestions(): Promise<SuggestedQuestion[]> {
-    const response = await apiClient.get('/api/ai-cfo/suggested-questions');
-    return response.data;
+  async recommend(): Promise<{ narrative: string; recommendations: unknown[] }> {
+    const response = await apiClient.post('/api/ai-cfo/recommend', {});
+    return response.data as { narrative: string; recommendations: unknown[] };
   }
 }
 

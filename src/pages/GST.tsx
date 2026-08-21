@@ -1,33 +1,51 @@
 import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileCheck, AlertTriangle, CalendarClock } from 'lucide-react';
-import { Card, PageHeader, Pill } from '@/components/ui';
+import { Card, PageHeader, Pill, ErrorState } from '@/components/ui';
+import { useToast } from '@/components/Toast';
 import { DataTable, type Column } from '@/components/DataTable';
-import { mockGstRecords } from '@/mock';
 import { CURRENCY } from '@/lib/format';
-
-interface GstRecord {
-  id: string;
-  period: string;
-  dueDate: string;
-  taxable: number;
-  taxAmount: number;
-  paid: number;
-  status: string;
-}
+import { getErrorMessage } from '@/lib/axios';
+import type { GstRow } from '@/lib/mappers';
+import gstService from '@/services/gstService';
 
 export default function GST() {
+  const qc = useQueryClient();
+  const { addToast } = useToast();
+  const { data: records, isLoading, error, refetch } = useQuery({
+    queryKey: ['gst'],
+    queryFn: () => gstService.getGSTRecords(),
+  });
+
   const [filter, setFilter] = useState<'all' | string>('all');
   const [sorting, setSorting] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'dueDate', direction: 'desc' });
 
-  const filtered = (mockGstRecords as GstRecord[])
+  const markFiledMutation = useMutation({
+    mutationFn: (id: string) => gstService.markAsFiled(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['gst'] });
+      addToast('GST marked as filed', 'success');
+    },
+    onError: (e) => addToast(getErrorMessage(e), 'error'),
+  });
+
+  const all = records || [];
+
+  const filtered = all
     .filter((g) => filter === 'all' || g.status === filter)
-    .sort((a: any, b: any) => (sorting.direction === 'asc' ? String(a[sorting.key]).localeCompare(String(b[sorting.key])) : String(b[sorting.key]).localeCompare(String(a[sorting.key]))));
+    .sort((a, b) => {
+      const av = (a as unknown as Record<string, unknown>)[sorting.key];
+      const bv = (b as unknown as Record<string, unknown>)[sorting.key];
+      const cmp = typeof av === 'number' && typeof bv === 'number' ? av - bv : String(av).localeCompare(String(bv));
+      return sorting.direction === 'asc' ? cmp : -cmp;
+    });
 
-  const upcoming = mockGstRecords.filter((g) => g.status === 'upcoming');
-  const overdue = mockGstRecords.filter((g) => g.status === 'overdue');
-  const completed = mockGstRecords.filter((g) => g.status === 'completed');
+  const today = new Date().toISOString().slice(0, 10);
+  const pending = all.filter((g) => g.status === 'pending' && g.dueDate >= today);
+  const overdue = all.filter((g) => g.status === 'overdue');
+  const filed = all.filter((g) => g.status === 'filed' || g.status === 'paid');
 
-  const columns: Column<GstRecord>[] = [
+  const columns: Column<GstRow>[] = [
     { key: 'period', header: 'Tax Period', render: (g) => <span className="font-medium text-slate-800">{g.period}</span> },
     { key: 'dueDate', header: 'Due Date', sortable: true },
     { key: 'taxable', header: 'Taxable Amount', align: 'right', render: (g) => CURRENCY(g.taxable) },
@@ -39,6 +57,16 @@ export default function GST() {
       render: (g) => <span className={g.paid >= g.taxAmount ? 'text-green-600' : 'text-amber-600'}>{CURRENCY(g.paid)}</span>,
     },
     { key: 'status', header: 'Status', render: (g) => <Pill value={g.status} /> },
+    {
+      key: 'actions',
+      header: '',
+      render: (g) =>
+        g.status === 'pending' || g.status === 'overdue' ? (
+          <button onClick={() => markFiledMutation.mutate(g.id)} className="text-xs font-medium text-blue-600 hover:text-blue-700 transition">
+            Mark filed
+          </button>
+        ) : null,
+    },
   ];
 
   const handleSort = (key: string) =>
@@ -49,9 +77,9 @@ export default function GST() {
       <PageHeader title="GST & Tax" subtitle="Track tax obligations, filings and due dates" />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatusCard icon={<CalendarClock className="w-5 h-5 text-blue-600" />} label="Upcoming Filings" value={upcoming.length} sub="Due in next 30 days" />
+        <StatusCard icon={<CalendarClock className="w-5 h-5 text-blue-600" />} label="Upcoming Filings" value={pending.length} sub="Due in next 30 days" />
         <StatusCard icon={<AlertTriangle className="w-5 h-5 text-red-500" />} label="Overdue" value={overdue.length} sub="Requires immediate action" tone="text-red-600" />
-        <StatusCard icon={<FileCheck className="w-5 h-5 text-green-600" />} label="Filed" value={completed.length} sub="Completed on time" tone="text-green-600" />
+        <StatusCard icon={<FileCheck className="w-5 h-5 text-green-600" />} label="Filed / Paid" value={filed.length} sub="Completed on time" tone="text-green-600" />
       </div>
 
       {overdue.length > 0 && (
@@ -66,7 +94,7 @@ export default function GST() {
 
       <Card>
         <div className="p-4 border-b border-slate-100 flex gap-2">
-          {['all', 'upcoming', 'completed', 'overdue'].map((s) => (
+          {['all', 'pending', 'filed', 'paid', 'overdue'].map((s) => (
             <button
               key={s}
               onClick={() => setFilter(s)}
@@ -76,7 +104,11 @@ export default function GST() {
             </button>
           ))}
         </div>
-        <DataTable columns={columns} data={filtered} keyExtractor={(g) => g.id} sorting={sorting} onSort={handleSort} emptyTitle="No GST records" />
+        {error ? (
+          <ErrorState message={getErrorMessage(error)} onRetry={() => refetch()} />
+        ) : (
+          <DataTable columns={columns} data={filtered} keyExtractor={(g) => g.id} sorting={sorting} onSort={handleSort} loading={isLoading} emptyTitle="No GST records" />
+        )}
       </Card>
     </div>
   );

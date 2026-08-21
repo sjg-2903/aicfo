@@ -1,73 +1,74 @@
 import apiClient from '@/lib/axios';
 
 /**
- * Business Profile Service
- * 
- * API Documentation:
- * - GET /api/profile - Get business profile
- * - PUT /api/profile - Update business profile
- * - GET /api/profile/preferences - Get user preferences
- * - PUT /api/profile/preferences - Update user preferences
+ * Business Profile Service — backed by FastAPI
+ *  - GET /api/business
+ *  - PUT /api/business
  */
 
 export interface BusinessProfile {
   id: string;
-  business_name: string;
-  business_type: string;
+  businessName: string;
+  businessType: string;
   industry: string;
-  gstin?: string;
-  pan?: string;
-  incorporation_date?: string;
+  gstin: string;
+  pan: string;
   email: string;
-  phone?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  pincode?: string;
-  website?: string;
-  founded_year?: number;
-  employee_count?: number;
-  annual_turnover?: number;
+  phone: string;
+  city: string;
+  state: string;
+  pincode: string;
+  website: string;
+  annualTurnover: number;
+  employeeCount: number;
   currency: string;
-  fiscal_year_start?: string;
 }
 
-export interface UserPreferences {
-  id: string;
-  timezone: string;
-  date_format: string;
-  currency: string;
-  number_format: string;
-  language: string;
-  theme: 'light' | 'dark';
-  notifications_enabled: boolean;
-  email_digest_frequency: 'daily' | 'weekly' | 'monthly' | 'never';
-  risk_alert_threshold: 'low' | 'medium' | 'high' | 'critical';
+export type BusinessProfileUpdate = Partial<
+  Omit<BusinessProfile, 'id' | 'currency'> & Record<string, unknown>
+>;
+
+function fromRaw(raw: Record<string, unknown>): BusinessProfile {
+  return {
+    id: String(raw.id ?? ''),
+    businessName: String(raw.business_name ?? ''),
+    businessType: String(raw.business_type ?? ''),
+    industry: String(raw.industry ?? ''),
+    gstin: String(raw.gstin ?? ''),
+    pan: String(raw.pan ?? ''),
+    email: String(raw.email ?? ''),
+    phone: String(raw.phone ?? ''),
+    city: String(raw.city ?? ''),
+    state: String(raw.state ?? ''),
+    pincode: String(raw.pincode ?? ''),
+    website: String(raw.website ?? ''),
+    annualTurnover: Number(raw.annual_turnover ?? 0),
+    employeeCount: Number(raw.employee_count ?? 0),
+    currency: String(raw.currency ?? 'INR'),
+  };
 }
 
-export interface ProfileUpdateRequest extends Partial<BusinessProfile> {}
-
-export interface PreferencesUpdateRequest extends Partial<UserPreferences> {}
+const SNAKE_KEYS: Record<string, string> = {
+  businessName: 'business_name',
+  businessType: 'business_type',
+  annualTurnover: 'annual_turnover',
+  employeeCount: 'employee_count',
+};
 
 class ProfileService {
   async getProfile(): Promise<BusinessProfile> {
-    const response = await apiClient.get('/api/profile');
-    return response.data;
+    const response = await apiClient.get('/api/business');
+    return fromRaw(response.data as Record<string, unknown>);
   }
 
-  async updateProfile(data: ProfileUpdateRequest): Promise<BusinessProfile> {
-    const response = await apiClient.put('/api/profile', data);
-    return response.data;
-  }
-
-  async getPreferences(): Promise<UserPreferences> {
-    const response = await apiClient.get('/api/profile/preferences');
-    return response.data;
-  }
-
-  async updatePreferences(data: PreferencesUpdateRequest): Promise<UserPreferences> {
-    const response = await apiClient.put('/api/profile/preferences', data);
-    return response.data;
+  async updateProfile(data: BusinessProfileUpdate): Promise<BusinessProfile> {
+    const payload: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (value === undefined || value === '') continue;
+      payload[SNAKE_KEYS[key] ?? key] = value;
+    }
+    const response = await apiClient.put('/api/business', payload);
+    return fromRaw(response.data as Record<string, unknown>);
   }
 }
 

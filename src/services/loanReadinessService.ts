@@ -1,40 +1,21 @@
 import apiClient from '@/lib/axios';
+import { mapLoanReadiness, type LoanReadinessView } from '@/lib/mappers';
 
 /**
- * Loan Readiness Service
- * 
- * API Documentation:
- * - GET /api/loan-readiness - Get loan readiness assessment
- * - GET /api/loan-readiness/factors - Get detailed readiness factors
+ * Loan Readiness Service — backed by FastAPI
+ *  - GET  /api/loan-readiness
+ *  - POST /api/loan-readiness/analyze
  */
 
-export interface LoanReadinessFactor {
-  name: string;
-  score: number;
-  weight: number;
-  contribution: number;
-  status: 'strong' | 'moderate' | 'weak';
-  recommendation?: string;
-}
-
-export interface LoanReadiness {
-  readiness_score: number;
-  status: 'ready' | 'moderate' | 'not_ready';
-  overall_recommendation: string;
-  factors: LoanReadinessFactor[];
-  improvement_suggestions: string[];
-  last_updated: string;
-}
-
 class LoanReadinessService {
-  async getLoanReadiness(): Promise<LoanReadiness> {
+  async getLoanReadiness(): Promise<LoanReadinessView> {
     const response = await apiClient.get('/api/loan-readiness');
-    return response.data;
+    return mapLoanReadiness(response.data as Parameters<typeof mapLoanReadiness>[0]);
   }
 
-  async getReadinessFactors(): Promise<LoanReadinessFactor[]> {
-    const response = await apiClient.get('/api/loan-readiness/factors');
-    return response.data;
+  async analyze(): Promise<LoanReadinessView> {
+    const response = await apiClient.post('/api/loan-readiness/analyze', {});
+    return mapLoanReadiness(response.data as Parameters<typeof mapLoanReadiness>[0]);
   }
 }
 

@@ -1,4 +1,6 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   TrendingUp,
   TrendingDown,
@@ -28,25 +30,72 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { KPICard } from '@/components/KPICard';
-import { Card, ChartCard, PageHeader, ScoreRing } from '@/components/ui';
+import { Card, ChartCard, PageHeader, ScoreRing, ErrorState } from '@/components/ui';
 import { CURRENCY, moneyTooltip } from '@/lib/format';
-import {
-  mockKpiSummary,
-  mockRevenueVsExpenses,
-  mockRevenueTrend,
-  mockCashFlowTrend,
-  mockCashFlowForecast,
-  mockExpenseDistribution,
-  mockReceivablesAging,
-  mockLoanOverview,
-  mockHealthScore,
-} from '@/mock';
+import { getErrorMessage } from '@/lib/axios';
+import { shortMonth } from '@/lib/mappers';
+import dashboardService from '@/services/dashboardService';
+import loanService from '@/services/loanService';
+import riskService from '@/services/riskService';
 
 const PIE_COLORS = ['#2563eb', '#10b981', '#f59e0b', '#f97316', '#8b5cf6', '#64748b'];
 
 export default function Dashboard() {
-  const healthColor =
-    mockHealthScore.score >= 75 ? '#10b981' : mockHealthScore.score >= 55 ? '#f59e0b' : '#ef4444';
+  const summary = useQuery({ queryKey: ['dashboard-summary'], queryFn: () => dashboardService.getKPISummary() });
+  const monthly = useQuery({ queryKey: ['monthly-series'], queryFn: () => dashboardService.getMonthlySeries(6) });
+  const revenueTrend = useQuery({ queryKey: ['revenue-trend'], queryFn: () => dashboardService.getRevenueTrend(30) });
+  const cashFlowTrend = useQuery({ queryKey: ['cash-flow-trend'], queryFn: () => dashboardService.getCashFlowTrend(30) });
+  const expenseDist = useQuery({ queryKey: ['expense-distribution'], queryFn: () => dashboardService.getExpenseDistribution() });
+  const aging = useQuery({ queryKey: ['receivables-aging'], queryFn: () => dashboardService.getReceivablesAging() });
+  const forecast = useQuery({ queryKey: ['forecast'], queryFn: () => dashboardService.getForecast() });
+  const loans = useQuery({ queryKey: ['loans'], queryFn: () => loanService.getLoans() });
+  const risk = useQuery({ queryKey: ['risk'], queryFn: () => riskService.getAssessment() });
+
+  const kpi = summary.data;
+  const loading = summary.isLoading;
+
+  const healthColor = kpi ? (kpi.healthScore.score >= 75 ? '#10b981' : kpi.healthScore.score >= 55 ? '#f59e0b' : '#ef4444') : '#10b981';
+
+  const monthlyData = useMemo(
+    () => (monthly.data || []).map((m) => ({ month: shortMonth(m.month), revenue: m.revenue, expenses: m.expenses })),
+    [monthly.data]
+  );
+
+  const forecastData = useMemo(() => {
+    if (!forecast.data || !kpi) return [];
+    let balance = kpi.cashBalance.current;
+    return forecast.data.points.map((p) => {
+      balance += p.predictedNet;
+      return { date: p.date, balance: Math.round(balance), net: p.predictedNet };
+    });
+  }, [forecast.data, kpi]);
+
+  const loanOverview = useMemo(
+    () =>
+      (loans.data || []).map((l) => ({
+        name: `${l.type} — ${l.lender}`,
+        outstanding: l.outstanding,
+        emi: l.emi,
+        progress: l.principal > 0 ? Math.max(0, Math.round((1 - l.outstanding / l.principal) * 100)) : 0,
+      })),
+    [loans.data]
+  );
+
+  const topRisk = useMemo(() => {
+    const risks = risk.data?.risks || [];
+    return risks.find((r) => r.severity === 'high' || r.severity === 'critical') || risks[0];
+  }, [risk.data]);
+
+  if (summary.isError) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Dashboard" subtitle="A live overview of your business's financial health" />
+        <Card>
+          <ErrorState message={getErrorMessage(summary.error)} onRetry={() => summary.refetch()} />
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -65,52 +114,24 @@ export default function Dashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        <KPICard
-          title="Revenue"
-          value={mockKpiSummary.revenue.current}
-          trend={mockKpiSummary.revenue.change}
-          trendLabel={mockKpiSummary.revenue.label}
-          icon={<TrendingUp className="w-5 h-5" />}
-          format="currency"
-        />
-        <KPICard
-          title="Expenses"
-          value={mockKpiSummary.expenses.current}
-          trend={mockKpiSummary.expenses.change}
-          trendLabel={mockKpiSummary.expenses.label}
-          icon={<Receipt className="w-5 h-5" />}
-          format="currency"
-        />
-        <KPICard
-          title="Net Profit"
-          value={mockKpiSummary.netProfit.current}
-          trend={mockKpiSummary.netProfit.change}
-          trendLabel={mockKpiSummary.netProfit.label}
-          icon={<IndianRupee className="w-5 h-5" />}
-          format="currency"
-        />
-        <KPICard
-          title="Cash Balance"
-          value={mockKpiSummary.cashBalance.current}
-          trend={mockKpiSummary.cashBalance.change}
-          trendLabel={mockKpiSummary.cashBalance.label}
-          icon={<Wallet className="w-5 h-5" />}
-          format="currency"
-        />
+        <KPICard title="Revenue" value={kpi?.revenue.current ?? 0} trend={kpi?.revenue.change} trendLabel={kpi?.revenue.label} icon={<TrendingUp className="w-5 h-5" />} loading={loading} format="currency" />
+        <KPICard title="Expenses" value={kpi?.expenses.current ?? 0} trend={kpi?.expenses.change} trendLabel={kpi?.expenses.label} icon={<Receipt className="w-5 h-5" />} loading={loading} format="currency" />
+        <KPICard title="Net Profit" value={kpi?.netProfit.current ?? 0} trend={kpi?.netProfit.change} trendLabel={kpi?.netProfit.label} icon={<IndianRupee className="w-5 h-5" />} loading={loading} format="currency" />
+        <KPICard title="Cash Balance" value={kpi?.cashBalance.current ?? 0} trendLabel={kpi?.cashBalance.label} icon={<Wallet className="w-5 h-5" />} loading={loading} format="currency" />
         <KPICard
           title="Outstanding Receivables"
-          value={mockKpiSummary.receivables.current}
-          trend={mockKpiSummary.receivables.change}
-          trendLabel={`${CURRENCY(mockKpiSummary.receivables.overdue)} overdue`}
+          value={kpi?.receivables.current ?? 0}
+          trendLabel={`${CURRENCY(kpi?.receivables.overdue ?? 0)} overdue`}
           icon={<TrendingDown className="w-5 h-5" />}
+          loading={loading}
           format="currency"
         />
         <KPICard
           title="Outstanding Debt"
-          value={mockKpiSummary.debt.current}
-          trend={mockKpiSummary.debt.change}
-          trendLabel={`EMI ${CURRENCY(mockKpiSummary.debt.upcomingEmi)} due ${mockKpiSummary.debt.nextEmiDate}`}
+          value={kpi?.debt.current ?? 0}
+          trendLabel={`EMI ${CURRENCY(kpi?.debt.upcomingEmi ?? 0)}${kpi?.debt.nextEmiDate ? ` due ${kpi.debt.nextEmiDate}` : ''}`}
           icon={<Banknote className="w-5 h-5" />}
+          loading={loading}
           format="currency"
         />
       </div>
@@ -119,25 +140,18 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="p-6 flex flex-col items-center justify-center text-center" hover>
           <h3 className="text-base font-semibold text-slate-900 mb-4 self-start">Financial Health Score</h3>
-          <ScoreRing score={mockHealthScore.score} size={160} stroke={12} label="Good" color={healthColor} />
+          <ScoreRing score={kpi?.healthScore.score ?? 0} size={160} stroke={12} label={kpi?.healthScore.label ?? ''} color={healthColor} />
           <p className="text-xs text-slate-500 mt-4 max-w-[220px]">
             Based on profitability, cash flow, debt and liquidity factors
           </p>
-          <Link
-            to="/financial-health"
-            className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 transition"
-          >
+          <Link to="/financial-health" className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 transition">
             View details <ArrowRight className="w-4 h-4" />
           </Link>
         </Card>
 
-        <ChartCard
-          title="Revenue vs Expenses"
-          subtitle="Last 6 months comparison"
-          className="lg:col-span-2"
-        >
+        <ChartCard title="Revenue vs Expenses" subtitle="Last 6 months comparison" className="lg:col-span-2">
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={mockRevenueVsExpenses} barGap={4}>
+            <BarChart data={monthlyData} barGap={4}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 100000}L`} />
@@ -154,7 +168,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ChartCard title="Revenue Trend" subtitle="Daily revenue vs target">
           <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={mockRevenueTrend}>
+            <LineChart data={revenueTrend.data || []}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} interval={4} />
               <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000}K`} />
@@ -168,7 +182,7 @@ export default function Dashboard() {
 
         <ChartCard title="Cash Flow Trend" subtitle="Inflow vs outflow (net)">
           <ResponsiveContainer width="100%" height={240}>
-            <AreaChart data={mockCashFlowTrend}>
+            <AreaChart data={cashFlowTrend.data || []}>
               <defs>
                 <linearGradient id="inflow" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
@@ -189,20 +203,11 @@ export default function Dashboard() {
 
       {/* Expense distribution + receivables aging */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title="Expense Distribution" subtitle="By category (30 days)">
+        <ChartCard title="Expense Distribution" subtitle="By category">
           <ResponsiveContainer width="100%" height={240}>
             <PieChart>
-              <Pie
-                data={mockExpenseDistribution}
-                dataKey="amount"
-                nameKey="category"
-                cx="50%"
-                cy="50%"
-                innerRadius={55}
-                outerRadius={90}
-                paddingAngle={2}
-              >
-                {mockExpenseDistribution.map((_, idx) => (
+              <Pie data={expenseDist.data || []} dataKey="amount" nameKey="category" cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={2}>
+                {(expenseDist.data || []).map((_, idx) => (
                   <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
                 ))}
               </Pie>
@@ -214,14 +219,14 @@ export default function Dashboard() {
 
         <ChartCard title="Receivables Aging" subtitle="Outstanding amount by age bracket">
           <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={mockReceivablesAging} layout="vertical" barGap={2}>
+            <BarChart data={aging.data || []} layout="vertical" barGap={2}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
               <XAxis type="number" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000}K`} />
               <YAxis type="category" dataKey="bracket" width={80} tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
               <Tooltip formatter={moneyTooltip} contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0' }} />
               <Bar dataKey="amount" name="Amount" radius={[0, 4, 4, 0]} maxBarSize={22}>
-                {mockReceivablesAging.map((entry, idx) => (
-                  <Cell key={idx} fill={entry.color} />
+                {(aging.data || []).map((entry, idx) => (
+                  <Cell key={idx} fill={entry.color || PIE_COLORS[idx % PIE_COLORS.length]} />
                 ))}
               </Bar>
             </BarChart>
@@ -231,13 +236,9 @@ export default function Dashboard() {
 
       {/* 30-day forecast + loan overview */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <ChartCard
-          title="30-Day Cash Flow Forecast"
-          subtitle="Historical vs predicted balance"
-          className="lg:col-span-2"
-        >
+        <ChartCard title="30-Day Cash Flow Forecast" subtitle="Projected cash balance" className="lg:col-span-2">
           <ResponsiveContainer width="100%" height={260}>
-            <AreaChart data={mockCashFlowForecast}>
+            <AreaChart data={forecastData}>
               <defs>
                 <linearGradient id="forecast" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#2563eb" stopOpacity={0.25} />
@@ -247,13 +248,9 @@ export default function Dashboard() {
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} interval={3} />
               <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 100000}L`} />
-              <Tooltip
-                formatter={moneyTooltip}
-                labelFormatter={(l) => `Date: ${l}`}
-                contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0' }}
-              />
+              <Tooltip formatter={moneyTooltip} labelFormatter={(l) => `Date: ${l}`} contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0' }} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Area type="monotone" dataKey="balance" name="Cash Balance" stroke="#2563eb" fill="url(#forecast)" strokeWidth={2} />
+              <Area type="monotone" dataKey="balance" name="Projected Balance" stroke="#2563eb" fill="url(#forecast)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -261,17 +258,15 @@ export default function Dashboard() {
         <Card className="p-6">
           <h3 className="text-base font-semibold text-slate-900 mb-4">Loan / Debt Overview</h3>
           <div className="space-y-4">
-            {mockLoanOverview.map((loan) => (
+            {loanOverview.length === 0 && !loans.isLoading && <p className="text-sm text-slate-400">No active loans.</p>}
+            {loanOverview.map((loan) => (
               <div key={loan.name} className="p-3 rounded-lg bg-slate-50">
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <span className="text-sm font-medium text-slate-700 truncate">{loan.name}</span>
                   <span className="text-xs text-slate-500 whitespace-nowrap">{loan.progress}% paid</span>
                 </div>
                 <div className="w-full bg-white rounded-full h-2 mb-2 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-blue-500 transition-all duration-700"
-                    style={{ width: `${loan.progress}%` }}
-                  />
+                  <div className="h-full rounded-full bg-blue-500 transition-all duration-700" style={{ width: `${loan.progress}%` }} />
                 </div>
                 <p className="text-xs text-slate-500">
                   Outstanding <span className="font-semibold text-slate-700">{CURRENCY(loan.outstanding)}</span> · EMI {CURRENCY(loan.emi)}
@@ -279,10 +274,7 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
-          <Link
-            to="/loans"
-            className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 transition"
-          >
+          <Link to="/loans" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 transition">
             Manage loans <ArrowRight className="w-4 h-4" />
           </Link>
         </Card>
@@ -293,7 +285,14 @@ export default function Dashboard() {
         <div className="flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
           <p className="text-sm text-slate-700">
-            <span className="font-semibold">3 active risks</span> require attention — including a potential cash shortage in 45 days.
+            {risk.data && risk.data.summary.active_risks > 0 ? (
+              <>
+                <span className="font-semibold">{risk.data.summary.active_risks} active risks</span> require attention
+                {topRisk ? <> — including “{topRisk.title.toLowerCase()}”.</> : '.'}
+              </>
+            ) : (
+              <span className="font-semibold">No significant risks</span>
+            )}
           </p>
         </div>
         <Link to="/risk-analysis" className="shrink-0 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 transition">

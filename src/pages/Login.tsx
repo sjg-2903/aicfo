@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, Brain, Sparkles } from 'lucide-react';
 import { useToast } from '@/components/Toast';
+import { getErrorMessage } from '@/lib/axios';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -18,6 +19,8 @@ export default function Login() {
     try {
       await loginAsDemo();
       navigate('/dashboard');
+    } catch (error) {
+      addToast(getErrorMessage(error, 'Demo login failed — is the backend running and demo data seeded?'), 'error');
     } finally {
       setDemoLoading(false);
     }
@@ -30,7 +33,7 @@ export default function Login() {
       await login(formData.email, formData.password);
       navigate('/dashboard');
     } catch (error) {
-      addToast('Invalid credentials', 'error');
+      addToast(getErrorMessage(error, 'Login failed'), 'error');
     } finally {
       setLoading(false);
     }

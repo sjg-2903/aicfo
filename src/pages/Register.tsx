@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 import { Mail, Lock, User, Building2, Eye, EyeOff, Brain, Sparkles } from 'lucide-react';
 import { useToast } from '@/components/Toast';
+import { getErrorMessage } from '@/lib/axios';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -18,8 +19,12 @@ export default function Register() {
   });
 
   const handleDemo = async () => {
-    await loginAsDemo();
-    navigate('/dashboard');
+    try {
+      await loginAsDemo();
+      navigate('/dashboard');
+    } catch (error) {
+      addToast(getErrorMessage(error, 'Demo login failed'), 'error');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,7 +34,7 @@ export default function Register() {
       await register(formData.email, formData.password, formData.business_name, formData.owner_name);
       navigate('/dashboard');
     } catch (error) {
-      addToast('Registration failed', 'error');
+      addToast(getErrorMessage(error, 'Registration failed'), 'error');
     } finally {
       setLoading(false);
     }
