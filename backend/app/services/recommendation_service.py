@@ -278,6 +278,167 @@ async def _generate_with_ai(
     return deterministic_recommendations, None
 
 
+async def generate_summary_bullets(
+    db: AsyncIOMotorDatabase,
+    business_id: Any,
+    now: Optional[datetime] = None,
+) -> dict:
+    """Produce AI-generated bullet-point sentences summarising all finance data.
+
+    The LLM receives the complete calculated analysis (metrics, health, risk,
+    loan-readiness, forecast) and every finance section (transactions, invoices,
+    expenses, GST, loans), then returns a list of natural-language sentences.
+    Falls back to deterministic bullets when no LLM is configured.
+    """
+    now = now or utcnow()
+    deterministic_recs = await generate_recommendations(db, business_id, now=now)
+    analysis = await _build_ai_analysis(db, business_id, deterministic_recs)
+
+    engine = "deterministic"
+    bullets: list[str] = []
+
+    if llm.is_available():
+        system = (
+            "You are an AI CFO for an Indian MSME. Analyse the supplied financial "
+            "data covering ALL sections — transactions, invoices, expenses, GST, "
+            "loans, cash flow, financial health, risk and loan readiness. "
+            "Return ONLY a JSON object with a single key \"bullets\" whose value is "
+            "an array of 6 to 12 concise, actionable sentences. Each sentence must "
+            "stand on its own, reference real numbers from the data, and cover a "
+            "different aspect of the business finances. Never invent figures. "
+            "Prioritise the most material findings first."
+        )
+        user = (
+            "Generate a comprehensive financial summary as bullet-point sentences "
+            "covering every finance section (invoices, cash flow, GST, loans, "
+            "expenses and transactions).\n\n"
+            f"Trusted business data analysis (JSON):\n{json.dumps(analysis, default=str)}"
+        )
+        try:
+            text = await llm.complete(system, user, max_tokens=2048, temperature=0.2)
+            parsed = _extract_json_payload(text or "")
+            if isinstance(parsed, dict):
+                raw_bullets = parsed.get("bullets") or []
+            elif isinstance(parsed, list):
+                raw_bullets = parsed
+            else:
+                raw_bullets = []
+            for b in raw_bullets:
+                s = str(b).strip()
+                if s and len(s) >= 10:
+                    bullets.append(s[:500])
+            if bullets:
+                engine = llm.active_provider() or "ai"
+        except Exception as exc:
+            logger.warning("AI summary bullet generation failed; using deterministic fallback: %s", exc)
+
+    if not bullets:
+        bullets = _deterministic_summary_bullets(analysis, deterministic_recs)
+
+    return {
+        "generated_at": now,
+        "engine": engine,
+        "bullets": bullets,
+    }
+
+
+def _deterministic_summary_bullets(analysis: dict, recs: list[dict]) -> list[str]:
+    """Build bullet-point sentences from the calculated analysis without an LLM."""
+    from app.utils.format import inr  # imported lazily to avoid cycle
+
+    metrics = analysis.get("calculated_analysis", {}).get("metrics") or {}
+    health = analysis.get("calculated_analysis", {}).get("financial_health") or {}
+    risk = analysis.get("calculated_analysis", {}).get("risk_analysis") or {}
+    readiness = analysis.get("calculated_analysis", {}).get("loan_readiness") or {}
+    forecast = analysis.get("calculated_analysis", {}).get("cash_flow_forecast")
+    sections = analysis.get("finance_sections") or {}
+
+    bullets: list[str] = []
+
+    # Revenue & expenses
+    rev = metrics.get("revenue", {})
+    exp = metrics.get("expenses", {})
+    if rev.get("current"):
+        change = rev.get("change_pct")
+        change_text = f" ({change:+.1f}% vs previous month)" if change is not None else ""
+        bullets.append(f"Revenue this month is {inr(rev['current'])}{change_text}.")
+    if exp.get("current"):
+        change = exp.get("change_pct")
+        change_text = f" ({change:+.1f}% vs previous month)" if change is not None else ""
+        bullets.append(f"Total expenses this month are {inr(exp['current'])}{change_text}.")
+
+    # Net profit
+    net = metrics.get("net_profit", {})
+    if net.get("current") is not None:
+        bullets.append(f"Net profit stands at {inr(net['current'])}.")
+
+    # Cash balance
+    cb = metrics.get("cash_balance", {})
+    if cb.get("current") is not None:
+        bullets.append(f"Current cash balance is {inr(cb['current'])}.")
+
+    # Receivables
+    recv = metrics.get("receivables", {})
+    if recv.get("outstanding"):
+        bullets.append(
+            f"Outstanding receivables total {inr(recv['outstanding'])} with {inr(recv.get('overdue', 0))} overdue."
+        )
+
+    # Debt
+    debt = metrics.get("debt", {})
+    if debt.get("outstanding"):
+        bullets.append(
+            f"Outstanding debt is {inr(debt['outstanding'])} with monthly EMIs of {inr(debt.get('monthly_emi', 0))}."
+        )
+
+    # Health
+    if health.get("score") is not None:
+        bullets.append(
+            f"Financial health score is {health['score']}/100 ({health.get('label', 'N/A')})."
+        )
+
+    # Risk
+    if risk.get("risk_score") is not None:
+        active = (risk.get("summary") or {}).get("active_risks", 0)
+        bullets.append(
+            f"Risk score is {risk['risk_score']}/100 ({risk.get('risk_level', 'N/A')}) with {active} active risk(s)."
+        )
+
+    # Loan readiness
+    if readiness.get("readiness_score") is not None:
+        bullets.append(
+            f"Loan readiness score is {readiness['readiness_score']}/100 ({readiness.get('label', 'N/A')})."
+        )
+
+    # Forecast
+    if forecast:
+        predicted_net = forecast.get("predicted_net_cash_flow")
+        if predicted_net is None:
+            predicted_net = (forecast.get("summary") or {}).get("predicted_net_cash_flow")
+        if predicted_net is not None:
+            bullets.append(
+                f"30-day forecast projects a net cash flow of {inr(predicted_net)} ({forecast.get('model', 'model')}, {forecast.get('confidence', 'N/A')} confidence)."
+            )
+
+    # Invoice / expense / GST / loan counts
+    for section_key, label in [
+        ("invoices", "invoices"), ("expenses", "expenses"),
+        ("gst_records", "GST records"), ("loans", "loans"),
+        ("transactions", "transactions"),
+    ]:
+        sec = sections.get(section_key, {})
+        total = sec.get("total_records_analyzed", 0)
+        if total:
+            bullets.append(f"{total} {label} on record have been analyzed.")
+
+    # Top deterministic recommendation
+    if recs:
+        top = recs[0]
+        bullets.append(f"Top priority: {top.get('title', 'N/A')} — {top.get('recommended_action', '')}")
+
+    return bullets
+
+
 async def generate_with_stats(
     db: AsyncIOMotorDatabase,
     business_id: Any,
@@ -343,6 +504,17 @@ async def generate_with_stats(
             )
         raise
     items.sort(key=lambda item: _PRIORITY_ORDER.get(str(item.get("priority")), 9))
+
+    # Generate AI summary bullets alongside the recommendations
+    summary_bullets: list[str] = []
+    summary_engine = "deterministic"
+    try:
+        summary_result = await generate_summary_bullets(db, business_id, now=now)
+        summary_bullets = summary_result.get("bullets", [])
+        summary_engine = summary_result.get("engine", "deterministic")
+    except Exception as exc:
+        logger.warning("Summary bullet generation failed: %s", exc)
+
     stats = {
         "created": len(items),
         "updated": 0,
@@ -352,6 +524,8 @@ async def generate_with_stats(
         "engine": ai_engine or "deterministic",
         "prompt_applied": bool(prompt and prompt.strip()),
         "generation_id": generation_id,
+        "summary_bullets": summary_bullets,
+        "summary_engine": summary_engine,
     }
     return items, stats
 
