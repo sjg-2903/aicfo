@@ -9,7 +9,7 @@ async def test_dashboard_recommendations_empty_data(client):
     assert resp.status_code == 200
     body = resp.json()["data"]
     assert body["recommendations"] == []
-    assert body["engine"] in ("deterministic", "gemini")
+    assert body["engine"] in ("deterministic", "gemini", "openai")
     assert body["narrative"] is None
 
 

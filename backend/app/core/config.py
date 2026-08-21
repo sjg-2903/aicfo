@@ -31,7 +31,21 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # ── Gemini (optional) ──────────────────────────────────────────────────
+    # ── LLM provider (optional) ────────────────────────────────────────────
+    # Which provider powers the AI narrative / document extraction.
+    #   "openai" → any OpenAI-compatible Chat Completions endpoint
+    #              (OpenAI, DeepSeek, Groq, OpenRouter, Together, Mistral,
+    #               Azure OpenAI, vLLM / Ollama, …). Set OPENAI_BASE_URL,
+    #               OPENAI_MODEL and OPENAI_API_KEY accordingly.
+    #   "gemini" → Google Gemini (legacy).
+    # When unset / no key configured, the AI CFO uses deterministic
+    # explanations built from the trusted backend calculations (no fake numbers).
+    LLM_PROVIDER: str = "openai"
+    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
+    OPENAI_MODEL: str = "gpt-4o-mini"
+
+    # ── Gemini (legacy, optional) ──────────────────────────────────────────
     GEMINI_API_KEY: Optional[str] = None
     GEMINI_MODEL: str = "gemini-2.0-flash"
 

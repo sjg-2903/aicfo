@@ -70,7 +70,7 @@ export default function DashboardRecommendations() {
               Generated from your transactions, invoices, expenses, GST and loans
               {data && (
                 <span className="ml-1.5 text-xs text-slate-400">
-                  · {data.engine === 'gemini' ? 'AI engine' : 'analysis engine'} ·{' '}
+                  · {data.engine === 'deterministic' ? 'analysis engine' : 'AI engine'} ·{' '}
                   {data.generatedAt ? new Date(data.generatedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
                 </span>
               )}

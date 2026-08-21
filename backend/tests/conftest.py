@@ -13,6 +13,8 @@ os.environ.setdefault("JWT_SECRET", "test-secret-that-is-long-enough-1234567890"
 os.environ.setdefault("ENVIRONMENT", "test")
 os.environ.setdefault("DEMO_MODE", "false")
 os.environ.setdefault("GEMINI_API_KEY", "")
+os.environ.setdefault("OPENAI_API_KEY", "")
+os.environ.setdefault("LLM_PROVIDER", "openai")
 os.environ.setdefault("ADMIN_EMAILS", "")
 
 import pytest

@@ -20,7 +20,7 @@ frontend through real REST APIs — no mock endpoints, no dummy calculations.
 9. [Response conventions](#response-conventions)
 10. [CSV imports](#csv-imports)
 11. [Financial engines](#financial-engines)
-12. [AI CFO & Gemini](#ai-cfo--gemini)
+12. [AI CFO & LLM](#ai-cfo--llm)
 13. [Demo mode & demo data](#demo-mode--demo-data)
 14. [Testing](#testing)
 15. [Frontend integration notes](#frontend-integration-notes)
@@ -45,7 +45,7 @@ frontend through real REST APIs — no mock endpoints, no dummy calculations.
 - **Risk Engine, Loan Readiness Engine, Recommendation Engine, Alert Engine.**
 - **CSV import** for transactions, invoices, expenses, GST and loans with full
   validation, normalization, duplicate detection and error reporting.
-- **AI CFO** chat / analyze / recommend endpoints (Gemini optional).
+- **AI CFO** chat / analyze / recommend endpoints (LLM optional).
 - **`/health`** for load-balancer / orchestrator health checks.
 - **Automatic OpenAPI/Swagger** at `/docs`.
 
@@ -83,7 +83,7 @@ backend/
 **End-to-end flow:** authenticated user → business identification →
 MongoDB retrieval → deterministic financial calculations → forecasting/risk
 analysis → specialized agent APIs → recommendation generation → optional
-Gemini explanation → JSON response → React frontend.
+LLM explanation → JSON response → React frontend.
 
 ---
 
@@ -158,7 +158,11 @@ automatically at startup (`app/db/indexes.py`).
 | `JWT_ALGORITHM` | JWT algorithm | `HS256` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Access token TTL | `30` |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | Refresh token TTL | `7` |
-| `GEMINI_API_KEY` | Optional Google Gemini key | *(empty)* |
+| `LLM_PROVIDER` | LLM provider: `openai` (OpenAI-compatible) or `gemini` | `openai` |
+| `OPENAI_API_KEY` | API key for the OpenAI-compatible provider | *(empty)* |
+| `OPENAI_BASE_URL` | Base URL for the OpenAI-compatible endpoint | `https://api.openai.com/v1` |
+| `OPENAI_MODEL` | Model name for the OpenAI-compatible provider | `gpt-4o-mini` |
+| `GEMINI_API_KEY` | Optional Google Gemini key (legacy) | *(empty)* |
 | `GEMINI_MODEL` | Gemini model name | `gemini-2.0-flash` |
 | `ENVIRONMENT` | `development` / `production` | `development` |
 | `CORS_ORIGINS` | Comma-separated allowed origins | `http://localhost:5173,...` |
@@ -277,14 +281,34 @@ LLM.
 
 ---
 
-## AI CFO & Gemini
+## AI CFO & LLM
 
 `POST /api/ai-cfo/chat` stores the conversation (`chat_sessions`,
 `chat_messages`) and answers using real context gathered from the engines.
 
-- With `GEMINI_API_KEY` set, Gemini **explains** the pre-computed numbers.
-- Without a key, a deterministic explainer formats the same trusted numbers.
+- The configured LLM (any OpenAI-compatible endpoint via `OPENAI_BASE_URL`/
+  `OPENAI_MODEL`, or Gemini via `GEMINI_API_KEY`) **explains** the
+  pre-computed numbers.
+- Without a provider key, a deterministic explainer formats the same trusted
+  numbers.
 - The AI never performs critical financial calculations.
+
+### Switching providers
+
+The LLM client is provider-agnostic. Set `LLM_PROVIDER=openai` and point
+`OPENAI_BASE_URL` / `OPENAI_MODEL` at any OpenAI-compatible Chat Completions
+endpoint — for example:
+
+| Provider | `OPENAI_BASE_URL` | Example `OPENAI_MODEL` |
+|---|---|---|
+| OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
+| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
+| Groq | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
+| OpenRouter | `https://openrouter.ai/api/v1` | `openai/gpt-4o-mini` |
+| Mistral | `https://api.mistral.ai/v1` | `mistral-small-latest` |
+| Ollama (local) | `http://localhost:11434/v1` | `llama3` |
+
+Set `LLM_PROVIDER=gemini` to use Google Gemini instead.
 
 ---
 

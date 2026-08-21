@@ -73,7 +73,9 @@ CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 ENVIRONMENT=development
 ```
 
-Leave `GEMINI_API_KEY` empty unless you want Gemini explanations in the AI CFO chat.
+Leave the LLM keys empty unless you want AI explanations in the AI CFO chat — set
+`LLM_PROVIDER=openai` (or `gemini`) with its key to enable them; otherwise the
+backend uses deterministic explanations built from your own data.
 
 ---
 

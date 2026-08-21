@@ -139,7 +139,7 @@ def _deterministic_summary(data: dict) -> str:
 
 
 async def _ai_summary(data: dict) -> str:
-    """Gemini narrative when configured; deterministic summary otherwise."""
+    """LLM narrative when a provider is configured; deterministic summary otherwise."""
     if llm.is_available():
         context = {
             "generated_at": str(data["generated_at"]),
