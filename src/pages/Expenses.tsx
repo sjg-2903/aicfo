@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Trash2, Upload } from 'lucide-react';
+import { Plus, Search, Upload } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Card, PageHeader, ChartCard, ErrorState } from '@/components/ui';
-import { Modal } from '@/components/Modal';
+import { EntityFormModal, type FieldDef, type FormValues } from '@/components/EntityFormModal';
+import { RowActions } from '@/components/RowActions';
 import UploadWizard from '@/components/UploadWizard';
 import { useToast } from '@/components/Toast';
 import { DataTable, Pagination, type Column } from '@/components/DataTable';
@@ -30,6 +31,7 @@ export default function Expenses() {
   const [page, setPage] = useState(1);
   const [sorting, setSorting] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
   const [showAdd, setShowAdd] = useState(false);
+  const [editing, setEditing] = useState<ExpenseRow | null>(null);
   const [showUpload, setShowUpload] = useState(false);
 
   const all = expenses || [];
@@ -41,6 +43,18 @@ export default function Expenses() {
       qc.invalidateQueries({ queryKey: ['expense-distribution'] });
       setShowAdd(false);
       addToast('Expense added', 'success');
+    },
+    onError: (e) => addToast(getErrorMessage(e), 'error'),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<ExpenseCreateRequest> }) => expenseService.updateExpense(id, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['expenses'] });
+      qc.invalidateQueries({ queryKey: ['expense-distribution'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] });
+      setEditing(null);
+      addToast('Expense updated', 'success');
     },
     onError: (e) => addToast(getErrorMessage(e), 'error'),
   });
@@ -93,11 +107,14 @@ export default function Expenses() {
     { key: 'amount', header: 'Amount', align: 'right', sortable: true, render: (e) => <span className="font-semibold text-red-600">{CURRENCY(e.amount)}</span> },
     {
       key: 'actions',
-      header: '',
+      header: 'Actions',
+      align: 'right',
       render: (e) => (
-        <button onClick={() => deleteMutation.mutate(e.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition" aria-label="Delete">
-          <Trash2 className="w-4 h-4" />
-        </button>
+        <RowActions
+          onEdit={() => setEditing(e)}
+          onDelete={() => deleteMutation.mutate(e.id)}
+          confirmMessage={`Delete expense "${e.description}"? This cannot be undone.`}
+        />
       ),
     },
   ];
@@ -180,7 +197,31 @@ export default function Expenses() {
         <Pagination page={currentPage} pageSize={PAGE_SIZE} total={filtered.length} onPageChange={setPage} />
       </Card>
 
-      <AddExpenseModal open={showAdd} onClose={() => setShowAdd(false)} onSubmit={(p) => createMutation.mutate(p)} submitting={createMutation.isPending} />
+      <EntityFormModal
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        title="Add Expense"
+        submitLabel="Save Expense"
+        fields={EXPENSE_FIELDS}
+        initial={{ date: new Date().toISOString().slice(0, 10), description: '', amount: '', category: 'Materials', vendor: '', payment_method: 'NEFT', recurring: false }}
+        submitting={createMutation.isPending}
+        onSubmit={(v) => createMutation.mutate(toExpensePayload(v))}
+      />
+
+      <EntityFormModal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title="Edit Expense"
+        submitLabel="Update Expense"
+        fields={EXPENSE_FIELDS}
+        initial={
+          editing
+            ? { date: editing.date, description: editing.description, amount: editing.amount, category: editing.category, vendor: editing.vendor, payment_method: editing.paymentMethod, recurring: editing.recurring }
+            : {}
+        }
+        submitting={updateMutation.isPending}
+        onSubmit={(v) => editing && updateMutation.mutate({ id: editing.id, payload: toExpensePayload(v) })}
+      />
 
       <UploadWizard
         entity="expenses"
@@ -197,65 +238,24 @@ export default function Expenses() {
   );
 }
 
-function AddExpenseModal({
-  open,
-  onClose,
-  onSubmit,
-  submitting,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (p: ExpenseCreateRequest) => void;
-  submitting: boolean;
-}) {
-  const today = new Date().toISOString().slice(0, 10);
-  const [form, setForm] = useState({ date: today, description: '', amount: '', category: 'Materials', vendor: '', payment_method: 'NEFT' });
+const EXPENSE_FIELDS: FieldDef[] = [
+  { name: 'date', label: 'Date', type: 'date', required: true },
+  { name: 'amount', label: 'Amount (₹)', type: 'number', required: true, min: 0, step: '0.01', placeholder: '15000' },
+  { name: 'description', label: 'Description', type: 'text', required: true, placeholder: 'e.g. Raw material purchase', full: true },
+  { name: 'category', label: 'Category', type: 'text', placeholder: 'Materials' },
+  { name: 'vendor', label: 'Vendor', type: 'text', placeholder: 'Vendor name' },
+  { name: 'payment_method', label: 'Payment Method', type: 'text', placeholder: 'NEFT' },
+  { name: 'recurring', label: 'Recurring expense', type: 'checkbox' },
+];
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const amount = Number(form.amount);
-    if (!amount || amount <= 0) return;
-    onSubmit({ date: form.date, description: form.description, amount, category: form.category, vendor: form.vendor, payment_method: form.payment_method });
+function toExpensePayload(v: FormValues): ExpenseCreateRequest {
+  return {
+    date: String(v.date),
+    description: String(v.description),
+    amount: Math.abs(Number(v.amount)),
+    category: String(v.category || ''),
+    vendor: String(v.vendor || ''),
+    payment_method: String(v.payment_method || ''),
+    recurring: !!v.recurring,
   };
-
-  return (
-    <Modal isOpen={open} onClose={onClose} title="Add Expense" size="md">
-      <form onSubmit={submit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-sm font-medium text-slate-600 block mb-1">Date</label>
-            <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" required />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-slate-600 block mb-1">Amount (₹)</label>
-            <input type="number" min="0" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" required />
-          </div>
-        </div>
-        <div>
-          <label className="text-sm font-medium text-slate-600 block mb-1">Description</label>
-          <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" placeholder="e.g. Raw material purchase" required />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-sm font-medium text-slate-600 block mb-1">Category</label>
-            <input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-slate-600 block mb-1">Vendor</label>
-            <input value={form.vendor} onChange={(e) => setForm({ ...form, vendor: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" />
-          </div>
-        </div>
-        <div>
-          <label className="text-sm font-medium text-slate-600 block mb-1">Payment Method</label>
-          <input value={form.payment_method} onChange={(e) => setForm({ ...form, payment_method: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" />
-        </div>
-        <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancel</button>
-          <button type="submit" disabled={submitting} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-lg text-sm font-medium transition">
-            {submitting ? 'Saving…' : 'Save Expense'}
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
 }

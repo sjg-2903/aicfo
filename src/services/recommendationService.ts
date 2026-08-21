@@ -6,6 +6,7 @@ import { mapRecommendation, type RecommendationRow } from '@/lib/mappers';
  *  - GET  /api/recommendations
  *  - POST /api/recommendations/generate
  *  - PUT  /api/recommendations/{id}/acknowledge | /complete | /dismiss
+ *  - DELETE /api/recommendations/{id}
  */
 
 export interface DashboardRecommendationRow {
@@ -89,6 +90,10 @@ class RecommendationService {
 
   async dismiss(id: string): Promise<void> {
     await apiClient.put(`/api/recommendations/${id}/dismiss`);
+  }
+
+  async remove(id: string): Promise<void> {
+    await apiClient.delete(`/api/recommendations/${id}`);
   }
 }
 

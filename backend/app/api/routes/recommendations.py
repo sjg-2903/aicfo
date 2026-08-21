@@ -92,7 +92,8 @@ async def generate(
     business: dict = Depends(get_current_business),
     user: dict = Depends(get_current_user),
 ):
-    recs = await recommendation_service.generate(db, business["_id"])
+    recs, stats = await recommendation_service.generate_with_stats(db, business["_id"])
+    fresh = stats["created"] + stats["revived"]
     await history_service.record_event(
         db,
         business_id=business["_id"],
@@ -100,10 +101,17 @@ async def generate(
         event_type="recommendations",
         entity="recommendation",
         status="success",
-        message=f"Generated {len(recs)} new AI recommendation(s)",
-        details={"generated": len(recs)},
+        message=(
+            f"Generated {fresh} new and refreshed {stats['updated']} AI recommendation(s)"
+        ),
+        details=stats,
     )
-    return ok(recs, f"Generated {len(recs)} recommendations")
+    message = (
+        f"Generated {fresh} new recommendation(s)"
+        if fresh
+        else f"Refreshed {stats['total']} recommendation(s) — no new items found"
+    )
+    return ok(recs, message)
 
 
 @router.put("/{recommendation_id}/acknowledge")
@@ -131,3 +139,13 @@ async def dismiss(
     business: dict = Depends(get_current_business),
 ):
     return ok(await recommendation_service.dismiss(db, business["_id"], recommendation_id))
+
+
+@router.delete("/{recommendation_id}")
+async def delete_recommendation(
+    recommendation_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    business: dict = Depends(get_current_business),
+):
+    await recommendation_service.delete(db, business["_id"], recommendation_id)
+    return ok(message="Recommendation deleted")

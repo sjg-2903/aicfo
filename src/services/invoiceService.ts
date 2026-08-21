@@ -37,6 +37,11 @@ class InvoiceService {
     return mapInvoice(response.data);
   }
 
+  async updateInvoice(id: string, data: Partial<InvoiceCreateRequest>): Promise<InvoiceRow> {
+    const response = await apiClient.put(`/api/invoices/${id}`, data);
+    return mapInvoice(response.data);
+  }
+
   async markAsPaid(id: string, paid_amount: number): Promise<InvoiceRow> {
     const response = await apiClient.put(`/api/invoices/${id}/mark-paid`, { paid_amount });
     return mapInvoice(response.data);

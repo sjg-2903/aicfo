@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Download, Trash2, Upload } from 'lucide-react';
+import { Plus, Search, Download, Upload } from 'lucide-react';
 import { Card, PageHeader, Pill, ErrorState } from '@/components/ui';
-import { Modal } from '@/components/Modal';
+import { EntityFormModal, type FieldDef, type FormValues } from '@/components/EntityFormModal';
+import { RowActions } from '@/components/RowActions';
 import UploadWizard from '@/components/UploadWizard';
 import { useToast } from '@/components/Toast';
 import { DataTable, Pagination, type Column } from '@/components/DataTable';
@@ -26,6 +27,7 @@ export default function Transactions() {
   const [page, setPage] = useState(1);
   const [sorting, setSorting] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
   const [showAdd, setShowAdd] = useState(false);
+  const [editing, setEditing] = useState<TxnRow | null>(null);
   const [showUpload, setShowUpload] = useState(false);
 
   const all = txns || [];
@@ -37,6 +39,17 @@ export default function Transactions() {
       qc.invalidateQueries({ queryKey: ['dashboard-summary'] });
       setShowAdd(false);
       addToast('Transaction added', 'success');
+    },
+    onError: (e) => addToast(getErrorMessage(e), 'error'),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<TransactionCreateRequest> }) => transactionService.updateTransaction(id, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transactions'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] });
+      setEditing(null);
+      addToast('Transaction updated', 'success');
     },
     onError: (e) => addToast(getErrorMessage(e), 'error'),
   });
@@ -96,15 +109,14 @@ export default function Transactions() {
     },
     {
       key: 'actions',
-      header: '',
+      header: 'Actions',
+      align: 'right',
       render: (t) => (
-        <button
-          onClick={() => deleteMutation.mutate(t.id)}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
-          aria-label="Delete"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+        <RowActions
+          onEdit={() => setEditing(t)}
+          onDelete={() => deleteMutation.mutate(t.id)}
+          confirmMessage={`Delete transaction "${t.description}"? This cannot be undone.`}
+        />
       ),
     },
   ];
@@ -201,7 +213,31 @@ export default function Transactions() {
         <Pagination page={currentPage} pageSize={PAGE_SIZE} total={filtered.length} onPageChange={setPage} />
       </Card>
 
-      <AddTransactionModal open={showAdd} onClose={() => setShowAdd(false)} onSubmit={(p) => createMutation.mutate(p)} submitting={createMutation.isPending} />
+      <EntityFormModal
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        title="Add Transaction"
+        submitLabel="Save Transaction"
+        fields={TXN_FIELDS}
+        initial={{ date: new Date().toISOString().slice(0, 10), description: '', amount: '', type: 'income', category: 'Sales', payment_method: 'Bank Transfer' }}
+        submitting={createMutation.isPending}
+        onSubmit={(v) => createMutation.mutate(toPayload(v))}
+      />
+
+      <EntityFormModal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title="Edit Transaction"
+        submitLabel="Update Transaction"
+        fields={TXN_FIELDS}
+        initial={
+          editing
+            ? { date: editing.date, description: editing.description, amount: Math.abs(editing.amount), type: editing.type, category: editing.category, payment_method: editing.paymentMethod }
+            : {}
+        }
+        submitting={updateMutation.isPending}
+        onSubmit={(v) => editing && updateMutation.mutate({ id: editing.id, payload: toPayload(v) })}
+      />
 
       <UploadWizard
         entity="transactions"
@@ -218,70 +254,32 @@ export default function Transactions() {
   );
 }
 
-function AddTransactionModal({
-  open,
-  onClose,
-  onSubmit,
-  submitting,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (p: TransactionCreateRequest) => void;
-  submitting: boolean;
-}) {
-  const today = new Date().toISOString().slice(0, 10);
-  const [form, setForm] = useState({ date: today, description: '', amount: '', type: 'income' as 'income' | 'expense', category: 'Sales', payment_method: 'Bank Transfer' });
+const TXN_FIELDS: FieldDef[] = [
+  { name: 'date', label: 'Date', type: 'date', required: true },
+  {
+    name: 'type',
+    label: 'Type',
+    type: 'select',
+    options: [
+      { value: 'income', label: 'Income' },
+      { value: 'expense', label: 'Expense' },
+    ],
+  },
+  { name: 'description', label: 'Description', type: 'text', required: true, placeholder: 'e.g. Invoice payment — Delta Traders', full: true },
+  { name: 'amount', label: 'Amount (₹)', type: 'number', required: true, min: 0, step: '0.01', placeholder: '25000' },
+  { name: 'category', label: 'Category', type: 'text', placeholder: 'Sales' },
+  { name: 'payment_method', label: 'Payment Method', type: 'text', placeholder: 'Bank Transfer', full: true },
+];
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const amount = Number(form.amount);
-    if (!amount || amount <= 0) return;
-    onSubmit({ date: form.date, description: form.description, amount, type: form.type, category: form.category, payment_method: form.payment_method });
+function toPayload(v: FormValues): TransactionCreateRequest {
+  return {
+    date: String(v.date),
+    description: String(v.description),
+    amount: Math.abs(Number(v.amount)),
+    type: v.type === 'expense' ? 'expense' : 'income',
+    category: String(v.category || ''),
+    payment_method: String(v.payment_method || ''),
   };
-
-  return (
-    <Modal isOpen={open} onClose={onClose} title="Add Transaction" size="md">
-      <form onSubmit={submit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-sm font-medium text-slate-600 block mb-1">Date</label>
-            <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" required />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-slate-600 block mb-1">Type</label>
-            <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as 'income' | 'expense' })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400">
-              <option value="income">Income</option>
-              <option value="expense">Expense</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <label className="text-sm font-medium text-slate-600 block mb-1">Description</label>
-          <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" placeholder="e.g. Invoice payment — Delta Traders" required />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-sm font-medium text-slate-600 block mb-1">Amount (₹)</label>
-            <input type="number" min="0" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" placeholder="25000" required />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-slate-600 block mb-1">Category</label>
-            <input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" />
-          </div>
-        </div>
-        <div>
-          <label className="text-sm font-medium text-slate-600 block mb-1">Payment Method</label>
-          <input value={form.payment_method} onChange={(e) => setForm({ ...form, payment_method: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" />
-        </div>
-        <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancel</button>
-          <button type="submit" disabled={submitting} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-lg text-sm font-medium transition">
-            {submitting ? 'Saving…' : 'Save Transaction'}
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
 }
 
 function StatsCard({ label, value, tone }: { label: string; value: number; tone: 'green' | 'red' | 'blue' }) {

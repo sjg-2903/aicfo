@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, CheckCircle2, Trash2, Upload } from 'lucide-react';
+import { Plus, Search, CheckCircle2, Upload } from 'lucide-react';
 import { Card, PageHeader, Pill, ErrorState } from '@/components/ui';
-import { Modal } from '@/components/Modal';
+import { EntityFormModal, type FieldDef, type FormValues } from '@/components/EntityFormModal';
+import { RowActions } from '@/components/RowActions';
 import UploadWizard from '@/components/UploadWizard';
 import { useToast } from '@/components/Toast';
 import { DataTable, Pagination, type Column } from '@/components/DataTable';
@@ -26,6 +27,7 @@ export default function Invoices() {
   const [page, setPage] = useState(1);
   const [sorting, setSorting] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
   const [showAdd, setShowAdd] = useState(false);
+  const [editing, setEditing] = useState<InvoiceRow | null>(null);
   const [showUpload, setShowUpload] = useState(false);
 
   const all = invoices || [];
@@ -37,6 +39,17 @@ export default function Invoices() {
       qc.invalidateQueries({ queryKey: ['dashboard-summary'] });
       setShowAdd(false);
       addToast('Invoice created', 'success');
+    },
+    onError: (e) => addToast(getErrorMessage(e), 'error'),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<InvoiceCreateRequest> }) => invoiceService.updateInvoice(id, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['invoices'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] });
+      setEditing(null);
+      addToast('Invoice updated', 'success');
     },
     onError: (e) => addToast(getErrorMessage(e), 'error'),
   });
@@ -55,6 +68,7 @@ export default function Invoices() {
     mutationFn: (id: string) => invoiceService.deleteInvoice(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['invoices'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] });
       addToast('Invoice deleted', 'success');
     },
     onError: (e) => addToast(getErrorMessage(e), 'error'),
@@ -102,26 +116,26 @@ export default function Invoices() {
     { key: 'status', header: 'Status', render: (i) => <Pill value={i.status} /> },
     {
       key: 'actions',
-      header: '',
+      header: 'Actions',
+      align: 'right',
       render: (i) => (
-        <div className="flex items-center justify-end gap-1">
+        <RowActions
+          onEdit={() => setEditing(i)}
+          onDelete={() => deleteMutation.mutate(i.id)}
+          confirmMessage={`Delete invoice ${i.number}? This cannot be undone.`}
+        >
           {i.status !== 'paid' && (
             <button
+              type="button"
               onClick={() => markPaidMutation.mutate({ id: i.id, total: i.total })}
               className="p-1.5 rounded-lg text-slate-400 hover:text-green-600 hover:bg-green-50 transition"
               title="Mark as paid"
+              aria-label="Mark as paid"
             >
               <CheckCircle2 className="w-4 h-4" />
             </button>
           )}
-          <button
-            onClick={() => deleteMutation.mutate(i.id)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
-            title="Delete"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
+        </RowActions>
       ),
     },
   ];
@@ -190,7 +204,47 @@ export default function Invoices() {
         <Pagination page={currentPage} pageSize={PAGE_SIZE} total={filtered.length} onPageChange={setPage} />
       </Card>
 
-      <AddInvoiceModal open={showAdd} onClose={() => setShowAdd(false)} onSubmit={(p) => createMutation.mutate(p)} submitting={createMutation.isPending} />
+      <EntityFormModal
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        title="New Invoice"
+        submitLabel="Create Invoice"
+        fields={INVOICE_FIELDS}
+        initial={{
+          invoice_number: '',
+          customer_name: '',
+          invoice_date: new Date().toISOString().slice(0, 10),
+          due_date: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+          total_amount: '',
+          paid_amount: 0,
+          status: 'sent',
+        }}
+        submitting={createMutation.isPending}
+        onSubmit={(v) => createMutation.mutate(toInvoicePayload(v))}
+      />
+
+      <EntityFormModal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title="Edit Invoice"
+        submitLabel="Update Invoice"
+        fields={INVOICE_FIELDS}
+        initial={
+          editing
+            ? {
+                invoice_number: editing.number,
+                customer_name: editing.customer,
+                invoice_date: editing.date,
+                due_date: editing.dueDate,
+                total_amount: editing.total,
+                paid_amount: editing.paid,
+                status: editing.status,
+              }
+            : {}
+        }
+        submitting={updateMutation.isPending}
+        onSubmit={(v) => editing && updateMutation.mutate({ id: editing.id, payload: toInvoicePayload(v) })}
+      />
 
       <UploadWizard
         entity="invoices"
@@ -207,62 +261,38 @@ export default function Invoices() {
   );
 }
 
-function AddInvoiceModal({
-  open,
-  onClose,
-  onSubmit,
-  submitting,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (p: InvoiceCreateRequest) => void;
-  submitting: boolean;
-}) {
-  const today = new Date().toISOString().slice(0, 10);
-  const due = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
-  const [form, setForm] = useState({ invoice_number: '', customer_name: '', invoice_date: today, due_date: due, total_amount: '' });
+const INVOICE_FIELDS: FieldDef[] = [
+  { name: 'invoice_number', label: 'Invoice Number', type: 'text', required: true, placeholder: 'INV-2026-001' },
+  { name: 'customer_name', label: 'Customer', type: 'text', required: true, placeholder: 'Delta Traders' },
+  { name: 'invoice_date', label: 'Invoice Date', type: 'date', required: true },
+  { name: 'due_date', label: 'Due Date', type: 'date', required: true },
+  { name: 'total_amount', label: 'Total Amount (₹)', type: 'number', required: true, min: 0, step: '0.01', placeholder: '200000' },
+  { name: 'paid_amount', label: 'Paid Amount (₹)', type: 'number', min: 0, step: '0.01', placeholder: '0' },
+  {
+    name: 'status',
+    label: 'Status',
+    type: 'select',
+    full: true,
+    options: [
+      { value: 'draft', label: 'Draft' },
+      { value: 'sent', label: 'Sent' },
+      { value: 'paid', label: 'Paid' },
+      { value: 'overdue', label: 'Overdue' },
+      { value: 'cancelled', label: 'Cancelled' },
+    ],
+  },
+];
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const total = Number(form.total_amount);
-    if (!total || total <= 0) return;
-    onSubmit({ invoice_number: form.invoice_number, customer_name: form.customer_name, invoice_date: form.invoice_date, due_date: form.due_date, total_amount: total });
+function toInvoicePayload(v: FormValues): InvoiceCreateRequest {
+  return {
+    invoice_number: String(v.invoice_number),
+    customer_name: String(v.customer_name),
+    invoice_date: String(v.invoice_date),
+    due_date: String(v.due_date),
+    total_amount: Number(v.total_amount),
+    paid_amount: Number(v.paid_amount || 0),
+    status: String(v.status || 'sent'),
   };
-
-  return (
-    <Modal isOpen={open} onClose={onClose} title="New Invoice" size="md">
-      <form onSubmit={submit} className="space-y-4">
-        <div>
-          <label className="text-sm font-medium text-slate-600 block mb-1">Invoice Number</label>
-          <input value={form.invoice_number} onChange={(e) => setForm({ ...form, invoice_number: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" placeholder="INV-2026-001" required />
-        </div>
-        <div>
-          <label className="text-sm font-medium text-slate-600 block mb-1">Customer</label>
-          <input value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" placeholder="Delta Traders" required />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-sm font-medium text-slate-600 block mb-1">Invoice Date</label>
-            <input type="date" value={form.invoice_date} onChange={(e) => setForm({ ...form, invoice_date: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" required />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-slate-600 block mb-1">Due Date</label>
-            <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" required />
-          </div>
-        </div>
-        <div>
-          <label className="text-sm font-medium text-slate-600 block mb-1">Total Amount (₹)</label>
-          <input type="number" min="0" step="0.01" value={form.total_amount} onChange={(e) => setForm({ ...form, total_amount: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400" placeholder="200000" required />
-        </div>
-        <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancel</button>
-          <button type="submit" disabled={submitting} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-lg text-sm font-medium transition">
-            {submitting ? 'Saving…' : 'Create Invoice'}
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
 }
 
 function Stat({ label, value, tone }: { label: string; value: number; tone: string }) {
