@@ -1,8 +1,9 @@
 """AI CFO agent — chat, analysis and recommendations.
 
-All numbers come from the deterministic analytics engines. The LLM (Gemini) is
-used only to *explain* these trusted calculations; without an API key the agent
-produces deterministic explanations from the same context.
+All numbers come from the deterministic analytics engines. The configured LLM
+(OpenAI-compatible or Gemini) is used only to *explain* these trusted
+calculations; without an API key the agent produces deterministic explanations
+from the same context.
 """
 
 import json
@@ -211,7 +212,7 @@ async def chat(
             "content": answer,
             "timestamp": now,
         },
-        "engine": "gemini" if answer and llm.is_available() else "deterministic",
+        "engine": llm.active_provider() if answer and llm.is_available() else "deterministic",
         "suggested_follow_ups": [
             "What are my biggest risks?",
             "Am I ready for a loan?",

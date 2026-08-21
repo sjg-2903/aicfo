@@ -84,7 +84,7 @@ async def test_extract_pdf_and_confirm(client):
     resp = await _upload(client, token, "/api/uploads/extract?import_type=invoices", _pdf_bytes(), "invoice-scan.pdf", "application/pdf")
     assert resp.status_code == 200, resp.text
     data = resp.json()["data"]
-    assert data["method"] in ("heuristics", "gemini", "manual")
+    assert data["method"] in ("heuristics", "gemini", "openai", "manual")
     assert data["rows"], "expected heuristic rows from the PDF text layer"
     first = data["rows"][0]
     assert first.get("invoice_number") == "INV-2026-501"

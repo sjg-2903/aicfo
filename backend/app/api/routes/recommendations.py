@@ -67,7 +67,7 @@ async def dashboard_recommendations(
                 f"Recommendations (JSON):\n{json.dumps(context, default=str)}",
             )
             if narrative:
-                engine = "gemini"
+                engine = llm.active_provider() or "gemini"
         except Exception as exc:  # pragma: no cover
             logger.warning("LLM narrative failed: %s", exc)
     if not narrative and recs:

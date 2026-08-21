@@ -1992,9 +1992,9 @@ Base: `POST /api/uploads/*`
 **POST** `/api/uploads/extract?import_type={transactions|invoices|expenses|gst|loans}`
 
 Multipart upload (`file`). Extracts candidate rows from a PDF (text layer), an image
-(Gemini vision when configured, otherwise Tesseract OCR when installed, otherwise a
-manual-entry fallback). **Nothing is stored in the database** — the caller must show
-the rows to the user for review.
+(LLM vision — OpenAI-compatible or Gemini — when configured, otherwise Tesseract OCR
+when installed, otherwise a manual-entry fallback). **Nothing is stored in the
+database** — the caller must show the rows to the user for review.
 
 ```json
 {
@@ -2002,7 +2002,7 @@ the rows to the user for review.
   "data": {
     "file_name": "invoice-scan.pdf",
     "import_type": "invoices",
-    "method": "gemini | tesseract | heuristics | manual",
+    "method": "openai | gemini | tesseract | heuristics | manual",
     "confidence": "high | medium | low",
     "rows": [{ "invoice_number": "INV-77", "total_amount": "42500", "...": "..." }],
     "raw_text": "…(truncated)…",
@@ -2097,8 +2097,8 @@ other businesses, 401 unauthenticated).
 
 Fresh (unpersisted) data-driven recommendations for the Dashboard, sorted by priority,
 covering receivables, cash flow, spending trends, cost saving, GST, loans, health and
-priorities. Includes an optional `narrative` (Gemini when configured, deterministic
-otherwise) and the `engine` used.
+priorities. Includes an optional `narrative` (LLM — OpenAI-compatible or Gemini —
+when configured, deterministic otherwise) and the `engine` used.
 
 ## Changelog
 

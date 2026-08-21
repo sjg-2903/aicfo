@@ -3,11 +3,11 @@
 Financial fields are extracted from uploaded invoices, statements and other
 documents. Three strategies are attempted, in order of quality:
 
-1. **Gemini vision/text** (when ``GEMINI_API_KEY`` is configured) — the model
-   returns structured rows for the target import type.
+1. **LLM vision/text** (when an LLM provider is configured — OpenAI-compatible
+   or Gemini) — the model returns structured rows for the target import type.
 2. **PDF text layer** (``pypdf``) + deterministic heuristic parsers.
 3. **Tesseract OCR** (optional system binary) + the same heuristics, for images
-   when Gemini is unavailable.
+   when the LLM is unavailable.
 
 Nothing is inserted into the database here: the caller shows the extracted
 rows in an editable review form and only the explicit *confirm* endpoint
@@ -31,7 +31,7 @@ MAX_EXTRACT_ROWS = 200
 
 DOCUMENT_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff"}
 
-# Entity-specific guidance for the Gemini extractor.
+# Entity-specific guidance for the LLM extractor.
 _ENTITY_PROMPTS = {
     "transactions": (
         "Extract every transaction from this document as a JSON array under the key \"rows\". "
@@ -360,7 +360,7 @@ def _parse_llm_json(text: str) -> Optional[dict]:
 async def _extract_with_llm(
     import_type: str, text: Optional[str], image: Optional[tuple[bytes, str]] = None,
 ) -> list[dict]:
-    """Ask Gemini for structured rows; return [] when unavailable/failed."""
+    """Ask the LLM for structured rows; return [] when unavailable/failed."""
     if not llm.is_available():
         return []
     system = (
@@ -432,12 +432,12 @@ async def extract_document(
     method = "heuristics"
     confidence = "low"
 
-    # 1. Gemini (vision for images, text for PDFs) — best quality.
+    # 1. LLM (vision for images, text for PDFs) — best quality.
     if llm.is_available():
         image_arg = (content, _mime_for(ext)) if is_image else None
         rows = await _extract_with_llm(import_type, text or None, image_arg)
         if rows:
-            method = "gemini"
+            method = llm.active_provider() or "gemini"
             confidence = "high"
 
     # 2. Deterministic heuristics over extracted text (PDFs, tesseract images).
@@ -478,7 +478,7 @@ def _mime_for(ext: str) -> str:
 
 
 def _method_note(method: str, confidence: str) -> str:
-    if method == "gemini":
+    if method in ("gemini", "openai"):
         return "Fields were extracted with the AI engine. Please review and correct them before confirming."
     if method == "tesseract":
         return "Text was recognized from the image. Some fields may be inaccurate — please review carefully."
