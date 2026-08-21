@@ -87,6 +87,22 @@ async def dashboard_recommendations(
     )
 
 
+@router.get("/summary")
+async def summary_bullets(
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    business: dict = Depends(get_current_business),
+):
+    """AI-generated bullet-point sentences summarising all finance data.
+
+    The LLM analyses every finance section — transactions, invoices, expenses,
+    GST, loans, cash flow, health, risk and loan readiness — and returns
+    natural-language sentences.  Falls back to deterministic bullets when no
+    LLM is configured.
+    """
+    result = await recommendation_service.generate_summary_bullets(db, business["_id"])
+    return ok(result)
+
+
 @router.post("/generate", status_code=201)
 async def generate(
     payload: RecommendationGenerateRequest,
@@ -117,7 +133,11 @@ async def generate(
         details=stats,
     )
     return ok(
-        recs,
+        {
+            "recommendations": recs,
+            "summary_bullets": stats.get("summary_bullets", []),
+            "summary_engine": stats.get("summary_engine", "deterministic"),
+        },
         f"Generated {generated} fresh recommendation(s) from your finance analysis",
     )
 
