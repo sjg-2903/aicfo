@@ -11,7 +11,8 @@ async def test_generate_and_list_recommendations(client):
     resp = await client.post("/api/recommendations/generate", json={}, headers=auth(token))
     assert resp.status_code == 201
     generated = resp.json()["data"]
-    assert isinstance(generated, list)
+    assert isinstance(generated["recommendations"], list)
+    assert isinstance(generated["summary_bullets"], list)
 
     resp = await client.get("/api/recommendations", headers=auth(token))
     assert resp.status_code == 200
@@ -20,10 +21,10 @@ async def test_generate_and_list_recommendations(client):
 
 async def test_generate_sends_whole_finance_prompt_to_ai(client, monkeypatch):
     token, _ = await seed_business(client)
-    captured = {}
+    captured = []
 
     async def fake_complete(system, user, **options):
-        captured.update(system=system, user=user, options=options)
+        captured.append({"system": system, "user": user, "options": options})
         return json.dumps(
             {
                 "recommendations": [
@@ -44,18 +45,19 @@ async def test_generate_sends_whole_finance_prompt_to_ai(client, monkeypatch):
         )
 
     monkeypatch.setattr(recommendation_service.llm, "is_available", lambda: True)
-    monkeypatch.setattr(recommendation_service.llm, "active_provider", lambda: "openai")
+    monkeypatch.setattr(recommendation_service.llm, "active_provider", lambda: "grok")
     monkeypatch.setattr(recommendation_service.llm, "complete", fake_complete)
 
     response = await client.post("/api/recommendations/generate", json={}, headers=auth(token))
     assert response.status_code == 201
-    lowered_prompt = captured["user"].lower()
+    recommendation_call = next(call for call in captured if call["options"].get("max_tokens") == 4096)
+    lowered_prompt = recommendation_call["user"].lower()
     for section in ("invoices", "cash flow", "gst", "loans", "expenses", "transactions"):
         assert section in lowered_prompt
     assert "recommendation display schema" in lowered_prompt
-    assert captured["options"]["max_tokens"] == 4096
+    assert recommendation_call["options"]["max_tokens"] == 4096
 
-    row = response.json()["data"][0]
+    row = response.json()["data"]["recommendations"][0]
     assert row["title"] == "Protect the cash buffer"
     assert row["impact_value"] == 12500
     assert row["rid"].startswith("rec-")
@@ -82,8 +84,8 @@ async def test_generate_replaces_old_set_and_returns_display_schema(client):
     first = await client.post("/api/recommendations/generate", json={}, headers=auth(token))
     second = await client.post("/api/recommendations/generate", json={}, headers=auth(token))
 
-    first_rows = first.json()["data"]
-    second_rows = second.json()["data"]
+    first_rows = first.json()["data"]["recommendations"]
+    second_rows = second.json()["data"]["recommendations"]
     assert first_rows, "first generate should return recommendations"
     assert second_rows, "re-running generate must not return an empty payload"
 
@@ -110,12 +112,12 @@ async def test_generate_replaces_old_set_and_returns_display_schema(client):
 async def test_generate_replaces_dismissed_recommendations(client):
     token, _ = await seed_business(client)
     generated = await client.post("/api/recommendations/generate", json={}, headers=auth(token))
-    old_rec = generated.json()["data"][0]
+    old_rec = generated.json()["data"]["recommendations"][0]
 
     await client.put(f"/api/recommendations/{old_rec['id']}/dismiss", headers=auth(token))
     regenerated = await client.post("/api/recommendations/generate", json={}, headers=auth(token))
 
-    new_rows = regenerated.json()["data"]
+    new_rows = regenerated.json()["data"]["recommendations"]
     assert old_rec["id"] not in {row["id"] for row in new_rows}
     assert all(row["status"] == "new" for row in new_rows)
 
@@ -123,7 +125,7 @@ async def test_generate_replaces_dismissed_recommendations(client):
 async def test_delete_recommendation(client):
     token, _ = await seed_business(client)
     generated = await client.post("/api/recommendations/generate", json={}, headers=auth(token))
-    rows = generated.json()["data"]
+    rows = generated.json()["data"]["recommendations"]
     rec = rows[0]
 
     deleted = await client.delete(f"/api/recommendations/{rec['id']}", headers=auth(token))

@@ -15,8 +15,8 @@ A professional, production-ready fintech frontend application built with React, 
 - **Cash Flow Analysis**: Historical and forecasted cash flow visualization
 - **Risk Analysis**: Identify and monitor financial risks
 - **Loan Readiness**: Assess readiness for business financing
-- **AI CFO Assistant**: Chat-based financial advisory powered by AI
-- **Recommendations**: Receive actionable financial recommendations
+- **AI CFO Assistant**: Grounded financial chat with optional Grok explanations and a deterministic fallback
+- **Recommendations**: Complete, actionable financial summary shared between Dashboard and Recommendations
 - **Alerts & Notifications**: Real-time financial alerts
 - **Reports**: Generate comprehensive financial reports
 - **Business Profile**: Manage business information and settings
@@ -35,6 +35,7 @@ A professional, production-ready fintech frontend application built with React, 
 - **Icons**: Lucide React
 - **Animations**: Framer Motion
 - **Date Handling**: date-fns
+- **AI Response Formatting**: react-markdown + remark-gfm (safe headings, lists and tables)
 
 ## Project Structure
 
@@ -132,6 +133,33 @@ cp .env.example .env
 ```env
 VITE_API_BASE_URL=http://localhost:8000
 ```
+
+### Enable Grok-powered explanations (optional)
+
+The frontend never needs an AI-provider key. Configure xAI Grok in the backend
+instead:
+
+```bash
+cd backend
+cp .env.example .env
+```
+
+```env
+# backend/.env
+XAI_API_KEY=your_xai_key_here
+XAI_BASE_URL=https://api.x.ai/v1
+XAI_MODEL=grok-4.6
+XAI_TIMEOUT_SECONDS=90
+XAI_MAX_RETRIES=2
+```
+
+Create the key in the [xAI Console](https://console.x.ai/), then restart the
+FastAPI service. Grok is used only for grounded explanations, summaries,
+insights and AI CFO chat responses. Financial calculations and recommendation
+rules remain deterministic; if the key is omitted or Grok is unavailable, the
+app automatically uses its deterministic explanation fallback. The AI CFO
+chat supports file understanding, but image generation is intentionally not
+included.
 
 ## Development
 

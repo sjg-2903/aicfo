@@ -1,10 +1,10 @@
-"""Recommendation service — AI-assisted generation and lifecycle actions.
+"""Recommendation service — deterministic rules with optional Grok narratives.
 
-The model never receives a vague request by itself.  We send the user's prompt,
-a calculated analysis spanning every finance section, and the exact schema used
-by the Recommendations screen.  Model output is validated and normalised before
-it is persisted.  The trusted deterministic engine remains the fallback when a
-provider is unavailable or returns unusable JSON.
+Grok never receives a vague request by itself. We send a user instruction, a
+calculated analysis spanning every finance section, and the exact schema used by
+the Recommendations screen. Its output is validated and normalised before it
+can be persisted. The trusted deterministic engine remains the fallback when
+Grok is unavailable or returns unusable JSON.
 """
 
 import hashlib

@@ -1,27 +1,23 @@
-"""Document extraction (OCR) for images and PDFs.
+"""Deterministic document extraction (OCR) for images and PDFs.
 
 Financial fields are extracted from uploaded invoices, statements and other
-documents. Three strategies are attempted, in order of quality:
+documents with local, review-first methods:
 
-1. **LLM vision/text** (when an LLM provider is configured — OpenAI-compatible
-   or Gemini) — the model returns structured rows for the target import type.
-2. **PDF text layer** (``pypdf``) + deterministic heuristic parsers.
-3. **Tesseract OCR** (optional system binary) + the same heuristics, for images
-   when the LLM is unavailable.
+1. **PDF text layer** (``pypdf``) + deterministic heuristic parsers.
+2. **Tesseract OCR** (optional system binary) + the same heuristics for images.
+3. **Manual review** when no safe text can be recovered.
 
-Nothing is inserted into the database here: the caller shows the extracted
-rows in an editable review form and only the explicit *confirm* endpoint
-stores anything. Extraction results are returned to the caller as plain JSON
-(the business context is only used for sizing limits and history tracking).
+Grok is intentionally not used for imports: it is reserved for explanations,
+summaries, insights, and AI CFO chat responses. Nothing is inserted into the
+database here; the caller shows candidate rows in an editable review form and
+only the explicit *confirm* endpoint stores anything.
 """
 
-import json
 import logging
 import re
 from datetime import datetime
 from typing import Any, Optional
 
-from app.agents import llm
 from app.services import import_service
 
 logger = logging.getLogger(__name__)
@@ -30,43 +26,6 @@ MAX_DOC_BYTES = 15 * 1024 * 1024  # 15 MB
 MAX_EXTRACT_ROWS = 200
 
 DOCUMENT_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff"}
-
-# Entity-specific guidance for the LLM extractor.
-_ENTITY_PROMPTS = {
-    "transactions": (
-        "Extract every transaction from this document as a JSON array under the key \"rows\". "
-        "Each row must use exactly these keys: date (YYYY-MM-DD), description, amount (number), "
-        "type (\"income\" or \"expense\"), category, payment_method, reference_id, notes. "
-        "Only include rows that are clearly transactions in the document."
-    ),
-    "invoices": (
-        "Extract every invoice from this document as a JSON array under the key \"rows\". "
-        "Each row must use exactly these keys: invoice_number, customer_name, customer_email, "
-        "invoice_date (YYYY-MM-DD), due_date (YYYY-MM-DD), total_amount (number), "
-        "paid_amount (number), status, notes. "
-        "Only include rows that are clearly invoices in the document."
-    ),
-    "expenses": (
-        "Extract every expense from this document as a JSON array under the key \"rows\". "
-        "Each row must use exactly these keys: date (YYYY-MM-DD), description, category, vendor, "
-        "amount (number), payment_method, recurring (true/false), notes. "
-        "Only include rows that are clearly expenses in the document."
-    ),
-    "gst": (
-        "Extract every GST/tax record from this document as a JSON array under the key \"rows\". "
-        "Each row must use exactly these keys: period, period_start (YYYY-MM-DD), "
-        "period_end (YYYY-MM-DD), due_date (YYYY-MM-DD), taxable_turnover (number), "
-        "tax_amount (number), paid_amount (number), status, reference_number, notes. "
-        "Only include rows that are clearly GST/tax entries in the document."
-    ),
-    "loans": (
-        "Extract every loan from this document as a JSON array under the key \"rows\". "
-        "Each row must use exactly these keys: lender, loan_type, principal_amount (number), "
-        "outstanding_amount (number), interest_rate (number), emi_amount (number), "
-        "start_date (YYYY-MM-DD), end_date (YYYY-MM-DD), next_emi_date (YYYY-MM-DD), status. "
-        "Only include rows that are clearly loans in the document."
-    ),
-}
 
 # ── Heuristic helpers ─────────────────────────────────────────────────────────
 
@@ -337,60 +296,6 @@ def _extract_image_text(content: bytes) -> str:
         return ""
 
 
-def _parse_llm_json(text: str) -> Optional[dict]:
-    """Robustly pull a JSON object out of an LLM response."""
-    if not text:
-        return None
-    start = text.find("{")
-    end = text.rfind("}")
-    if start == -1 or end <= start:
-        return None
-    try:
-        return json.loads(text[start : end + 1])
-    except json.JSONDecodeError:
-        # Tolerate trailing commas / single quotes in sloppy model output.
-        snippet = text[start : end + 1]
-        snippet = re.sub(r",\s*([}\]])", r"\1", snippet)
-        try:
-            return json.loads(snippet)
-        except json.JSONDecodeError:
-            return None
-
-
-async def _extract_with_llm(
-    import_type: str, text: Optional[str], image: Optional[tuple[bytes, str]] = None,
-) -> list[dict]:
-    """Ask the LLM for structured rows; return [] when unavailable/failed."""
-    if not llm.is_available():
-        return []
-    system = (
-        "You are a precise financial document extraction assistant for an Indian MSME "
-        "accounting product. Reply ONLY with valid JSON: {\"rows\": [...]}. Never invent "
-        "data that is not present in the document."
-    )
-    try:
-        if image is not None:
-            rows_json = await llm.complete_vision(system, _ENTITY_PROMPTS[import_type], image[0], image[1])
-        else:
-            rows_json = await llm.complete(
-                system,
-                f"{_ENTITY_PROMPTS[import_type]}\n\nDocument text:\n{(text or '')[:12000]}",
-            )
-    except Exception as exc:
-        logger.warning("LLM extraction failed: %s", exc)
-        return []
-    parsed = _parse_llm_json(rows_json or "")
-    if not parsed:
-        return []
-    raw_rows = parsed.get("rows") or []
-    if not isinstance(raw_rows, list):
-        return []
-    rows = []
-    for raw in raw_rows[:MAX_EXTRACT_ROWS]:
-        if isinstance(raw, dict):
-            rows.append(_clean_row(raw, import_type))
-    return [r for r in rows if any(r.values())]
-
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
@@ -399,11 +304,7 @@ async def extract_document(
     content: bytes,
     filename: str,
 ) -> dict:
-    """Extract candidate rows from an uploaded image/PDF document.
-
-    Returns a dict with ``method``, ``confidence``, ``rows`` and ``raw_text``.
-    The caller is responsible for the user review / confirmation step.
-    """
+    """Extract candidate rows locally; nothing is saved until user confirmation."""
     if import_type not in import_service.IMPORT_TYPES:
         from app.core.errors import BadRequestError
 
@@ -427,32 +328,25 @@ async def extract_document(
 
     is_image = ext in {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff"}
     text = "" if is_image else _extract_pdf_text(content)
-
-    rows: list[dict] = []
     method = "heuristics"
     confidence = "low"
 
-    # 1. LLM (vision for images, text for PDFs) — best quality.
-    if llm.is_available():
-        image_arg = (content, _mime_for(ext)) if is_image else None
-        rows = await _extract_with_llm(import_type, text or None, image_arg)
-        if rows:
-            method = llm.active_provider() or "gemini"
-            confidence = "high"
-
-    # 2. Deterministic heuristics over extracted text (PDFs, tesseract images).
-    if not rows:
-        if is_image and not text:
-            text = _extract_image_text(content)
-            if text:
-                method = "tesseract"
+    # OCR is only needed for images. It runs locally when the optional
+    # Tesseract binary is available, then feeds the same deterministic parser.
+    if is_image:
+        text = _extract_image_text(content)
         if text:
-            rows = [_clean_row(r, import_type) for r in _heuristic_rows(text, import_type)]
-            rows = [r for r in rows if any(r.values())]
-            if rows:
-                confidence = "medium" if method == "tesseract" else "low"
-        if not rows:
-            method = "manual" if is_image and not text else "heuristics"
+            method = "tesseract"
+            confidence = "medium"
+
+    rows: list[dict] = []
+    if text:
+        rows = [_clean_row(row, import_type) for row in _heuristic_rows(text, import_type)]
+        rows = [row for row in rows if any(row.values())]
+
+    if not rows:
+        method = "manual" if is_image and not text else "heuristics"
+        confidence = "low"
 
     return {
         "file_name": filename,
@@ -465,21 +359,7 @@ async def extract_document(
         "note": _method_note(method, confidence),
     }
 
-
-def _mime_for(ext: str) -> str:
-    return {
-        ".png": "image/png",
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".webp": "image/webp",
-        ".tif": "image/tiff",
-        ".tiff": "image/tiff",
-    }.get(ext, "image/jpeg")
-
-
 def _method_note(method: str, confidence: str) -> str:
-    if method in ("gemini", "openai"):
-        return "Fields were extracted with the AI engine. Please review and correct them before confirming."
     if method == "tesseract":
         return "Text was recognized from the image. Some fields may be inaccurate — please review carefully."
     if method == "manual":

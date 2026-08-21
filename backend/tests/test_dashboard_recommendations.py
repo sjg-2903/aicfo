@@ -1,49 +1,32 @@
-"""Dashboard AI recommendations endpoint tests."""
+"""Complete recommendations summary endpoint tests.
+
+The Dashboard and Recommendations page share this one endpoint and frontend
+component; there is no dashboard-only recommendation generator anymore.
+"""
 
 from tests.helpers import auth, register, seed_business
 
 
-async def test_dashboard_recommendations_empty_data(client):
+async def test_recommendation_summary_empty_data(client):
     token = (await register(client))["access_token"]
-    resp = await client.get("/api/recommendations/dashboard", headers=auth(token))
-    assert resp.status_code == 200
-    body = resp.json()["data"]
-    assert body["recommendations"] == []
-    assert body["engine"] in ("deterministic", "gemini", "openai")
-    assert body["narrative"] is None
+    response = await client.get("/api/recommendations/summary", headers=auth(token))
+    assert response.status_code == 200
+    body = response.json()["data"]
+    assert body["engine"] in ("deterministic", "grok")
+    assert isinstance(body["bullets"], list)
 
 
-async def test_dashboard_recommendations_are_data_driven(client):
+async def test_recommendation_summary_is_data_driven(client):
     token, _ = await seed_business(client)
-    resp = await client.get("/api/recommendations/dashboard", headers=auth(token))
-    assert resp.status_code == 200
-    body = resp.json()["data"]
-    recs = body["recommendations"]
-    assert len(recs) >= 3
-
-    # The seeded business has an overdue invoice → receivables recommendation.
-    categories = {r["category"] for r in recs}
-    assert "receivables" in categories
-
-    # Priorities are valid and sorted by severity.
-    order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-    assert all(r["priority"] in order for r in recs)
-    priorities = [order[r["priority"]] for r in recs]
-    assert priorities == sorted(priorities)
-
-    # Every recommendation carries a concrete action.
-    assert all(r["recommended_action"] for r in recs)
-
-    # Limited by the query parameter.
-    resp = await client.get("/api/recommendations/dashboard", params={"limit": 2}, headers=auth(token))
-    assert len(resp.json()["data"]["recommendations"]) == 2
+    response = await client.get("/api/recommendations/summary", headers=auth(token))
+    assert response.status_code == 200
+    body = response.json()["data"]
+    assert body["bullets"]
+    combined = " ".join(body["bullets"]).lower()
+    assert "revenue" in combined or "receivable" in combined
 
 
-async def test_dashboard_recommendations_scoped_per_business(client):
-    token_a, _ = await seed_business(client, email="a@corp.com")
-    token_b = (await register(client, email="b@corp.com", business_name="Corp B"))["access_token"]
-
-    resp_a = await client.get("/api/recommendations/dashboard", headers=auth(token_a))
-    resp_b = await client.get("/api/recommendations/dashboard", headers=auth(token_b))
-    assert resp_a.json()["data"]["recommendations"]
-    assert resp_b.json()["data"]["recommendations"] == []
+async def test_dashboard_only_recommendation_endpoint_is_removed(client):
+    token = (await register(client))["access_token"]
+    response = await client.get("/api/recommendations/dashboard", headers=auth(token))
+    assert response.status_code == 405

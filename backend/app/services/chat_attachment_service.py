@@ -3,7 +3,8 @@
 Chat accepts any non-empty file up to 15 MB. Known office, data, document, text
 and image formats receive richer extraction; every other binary format gets a
 safe metadata summary. Files are never executed or imported into the business
-ledgers. Images retain their bytes only in memory for a vision-capable provider.
+ledgers. Images retain their bytes only in memory for Grok image understanding
+within the active chat request; this module never generates images.
 """
 
 from __future__ import annotations
@@ -155,7 +156,7 @@ def _office_archive_context(content: bytes, file_name: str) -> tuple[str, str]:
 
 
 def _image_ocr(content: bytes) -> str:
-    """Best-effort local OCR for deterministic fallback; vision remains primary."""
+    """Best-effort local OCR used by the deterministic chat fallback."""
     try:
         from PIL import Image
         import pytesseract

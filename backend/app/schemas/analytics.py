@@ -1,6 +1,6 @@
 """Schemas for forecast, risk, loan-readiness, recommendation, alert and AI-CFO."""
 
-from typing import Literal, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -46,11 +46,6 @@ class AlertPatchRequest(BaseModel):
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     session_id: Optional[str] = None
-
-
-class ImageGenerateRequest(BaseModel):
-    prompt: str = Field(min_length=3, max_length=2000)
-    size: Literal["1024x1024", "1536x1024", "1024x1536"] = "1024x1024"
 
 
 class AnalyzeRequest(BaseModel):

@@ -1393,8 +1393,15 @@ Get detailed readiness factors.
 
 ## AI CFO Endpoints
 
+The AI CFO is grounded in the authenticated business's calculated financial
+context. xAI Grok is optional and is used only for explanations, summaries,
+insights, and chat responses; the backend falls back to deterministic output if
+no `XAI_API_KEY` is configured or an xAI request fails. Financial calculations,
+forecasting, risk scores, and recommendation rules are never delegated to Grok.
+
 ### POST /api/ai-cfo/chat
-Send message to AI CFO assistant.
+
+Send a text message to the AI CFO assistant.
 
 **Authentication:** Required
 
@@ -1402,117 +1409,76 @@ Send message to AI CFO assistant.
 ```json
 {
   "message": "How is my business doing?",
-  "context": {
-    "period": "last_30_days"
-  }
+  "session_id": "optional MongoDB session id from a previous response"
 }
 ```
 
 **Response (200):**
 ```json
 {
-  "message": {
-    "id": "msg_1",
-    "role": "assistant",
-    "content": "Your business is showing positive growth with revenue up 15% compared to the previous month...",
-    "timestamp": "2024-01-15T10:30:00Z",
-    "thinking": "Analyzing financial metrics from past 30 days...",
-    "sources": [
-      {
-        "type": "dashboard",
-        "reference": "revenue_trend"
-      }
-    ]
-  },
-  "suggested_follow_ups": [
-    "What are my biggest expenses?",
-    "Will I face a cash shortage?",
-    "Should I pursue a loan?"
-  ],
-  "insights": [
-    {
-      "type": "risk",
-      "title": "High Receivables",
-      "description": "You have ₹150,000 in outstanding receivables"
-    }
-  ]
-}
-```
-
----
-
-### GET /api/ai-cfo/conversation
-Get conversation history.
-
-**Authentication:** Required
-
-**Response (200):**
-```json
-{
-  "messages": [
-    {
-      "id": "msg_1",
-      "role": "user",
-      "content": "How is my business doing?",
-      "timestamp": "2024-01-15T10:00:00Z"
-    },
-    {
-      "id": "msg_2",
+  "success": true,
+  "data": {
+    "session_id": "…",
+    "engine": "grok | deterministic",
+    "message": {
       "role": "assistant",
-      "content": "Your business...",
-      "timestamp": "2024-01-15T10:00:05Z"
-    }
-  ],
-  "total_messages": 10,
-  "created_at": "2024-01-15T09:00:00Z"
+      "content": "## Financial snapshot\n\n| Metric | Current period |…",
+      "timestamp": "2026-08-21T10:30:00Z"
+    },
+    "suggested_follow_ups": [
+      "What are my biggest risks?",
+      "Am I ready for a loan?",
+      "How is my cash flow?"
+    ]
+  }
 }
 ```
 
----
+Assistant content is safe GitHub-flavored Markdown. The frontend renders
+headings, paragraphs, lists, tables and emphasized financial values without
+rendering arbitrary HTML.
 
-### DELETE /api/ai-cfo/conversation
-Clear conversation history.
+### POST /api/ai-cfo/chat/file
 
-**Authentication:** Required
+Send a chat message with one `multipart/form-data` attachment. The fields are
+`message`, optional `session_id`, and `file` (up to 15 MB). The attachment is
+reviewed only within chat and is not imported into business ledgers. Image
+attachments can be understood when the selected Grok model supports vision;
+the API never generates images.
 
-**Response (200):**
+The response has the same shape as `/chat` plus safe attachment metadata:
+
 ```json
 {
-  "message": "Conversation cleared"
+  "attachment": {
+    "name": "invoices.csv",
+    "size": 2841,
+    "content_type": "text/csv",
+    "kind": "document"
+  }
 }
 ```
 
----
+### POST /api/ai-cfo/analyze
 
-### GET /api/ai-cfo/suggested-questions
-Get suggested questions for AI CFO.
+Return the deterministic calculated analysis and a narrative summary for the
+current business.
 
-**Authentication:** Required
+### POST /api/ai-cfo/recommend
 
-**Response (200):**
-```json
-[
-  {
-    "question": "How is my business doing?",
-    "category": "overview",
-    "icon": "chart"
-  },
-  {
-    "question": "Why is my cash flow decreasing?",
-    "category": "cash_flow",
-    "icon": "trending-down"
-  },
-  {
-    "question": "Which customers owe me the most?",
-    "category": "receivables",
-    "icon": "users"
-  }
-]
-```
+Return deterministic recommendations and an explanatory narrative for the
+current business.
 
----
+There is intentionally no image-generation endpoint in the AI CFO API.
 
 ## Recommendation Endpoints
+
+### GET /api/recommendations/summary
+
+Return the complete financial-summary bullet list used by both Dashboard and the
+Recommendations page. This is the single shared recommendation-summary source;
+deterministic rules generate the underlying findings and Grok may only improve
+natural-language insights when configured.
 
 ### GET /api/recommendations
 Get recommendations with pagination and filtering.
@@ -1991,10 +1957,11 @@ Base: `POST /api/uploads/*`
 
 **POST** `/api/uploads/extract?import_type={transactions|invoices|expenses|gst|loans}`
 
-Multipart upload (`file`). Extracts candidate rows from a PDF (text layer), an image
-(LLM vision — OpenAI-compatible or Gemini — when configured, otherwise Tesseract OCR
-when installed, otherwise a manual-entry fallback). **Nothing is stored in the
-database** — the caller must show the rows to the user for review.
+Multipart upload (`file`). Extracts candidate rows locally from a PDF text layer or,
+for an image, optional Tesseract OCR followed by deterministic heuristics. It falls
+back to manual review when no safe text can be recovered. Grok is reserved for
+explanations, summaries, insights, and AI CFO chat responses. **Nothing is stored in
+the database** — the caller must show the rows to the user for review.
 
 ```json
 {
@@ -2002,8 +1969,8 @@ database** — the caller must show the rows to the user for review.
   "data": {
     "file_name": "invoice-scan.pdf",
     "import_type": "invoices",
-    "method": "openai | gemini | tesseract | heuristics | manual",
-    "confidence": "high | medium | low",
+    "method": "tesseract | heuristics | manual",
+    "confidence": "medium | low",
     "rows": [{ "invoice_number": "INV-77", "total_amount": "42500", "...": "..." }],
     "raw_text": "…(truncated)…",
     "row_count": 2,
@@ -2091,14 +2058,16 @@ other businesses, 401 unauthenticated).
 
 **DELETE** `/api/reports/pdf/{report_id}`
 
-## Dashboard AI Recommendations
+## Complete Recommendations Summary
 
-**GET** `/api/recommendations/dashboard?limit=6`
+**GET** `/api/recommendations/summary`
 
-Fresh (unpersisted) data-driven recommendations for the Dashboard, sorted by priority,
-covering receivables, cash flow, spending trends, cost saving, GST, loans, health and
-priorities. Includes an optional `narrative` (LLM — OpenAI-compatible or Gemini —
-when configured, deterministic otherwise) and the `engine` used.
+Returns the complete financial-summary bullet list used by both the Dashboard
+and the Recommendations page. The shared frontend component and this single
+endpoint prevent separate dashboard recommendation logic. Recommendation rules
+are deterministic; Grok may improve the natural-language insight summary when
+configured, with a deterministic fallback on any provider failure.
+
 
 ## Changelog
 
@@ -2107,4 +2076,4 @@ when configured, deterministic otherwise) and the `engine` used.
   - Image/PDF extraction with editable review + explicit confirm (no silent inserts)
   - Real PDF report generation (reportlab) with charts, metrics and AI recommendations
   - Unified activity History feed with report re-download
-  - Dashboard AI Recommendations section (data-driven, priority-ranked)
+  - Shared complete Recommendations summary on Dashboard and Recommendations page

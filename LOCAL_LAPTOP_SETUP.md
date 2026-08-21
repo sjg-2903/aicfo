@@ -73,9 +73,19 @@ CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 ENVIRONMENT=development
 ```
 
-Leave the LLM keys empty unless you want AI explanations in the AI CFO chat — set
-`LLM_PROVIDER=openai` (or `gemini`) with its key to enable them; otherwise the
-backend uses deterministic explanations built from your own data.
+Leave `XAI_API_KEY` empty unless you want Grok-powered explanations in the AI
+CFO chat. To enable it, create an xAI key and add the following to `backend/.env`:
+
+```env
+XAI_API_KEY=your_xai_key_here
+XAI_BASE_URL=https://api.x.ai/v1
+XAI_MODEL=grok-4.6
+```
+
+Grok is used only for explanations, summaries, insights and chat responses;
+financial calculations and recommendation rules always remain deterministic.
+Without a key, the backend uses deterministic explanations built from your own
+data.
 
 ---
 

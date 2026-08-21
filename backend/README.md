@@ -20,7 +20,7 @@ frontend through real REST APIs — no mock endpoints, no dummy calculations.
 9. [Response conventions](#response-conventions)
 10. [CSV imports](#csv-imports)
 11. [Financial engines](#financial-engines)
-12. [AI CFO & LLM](#ai-cfo--llm)
+12. [AI CFO & Grok](#ai-cfo--grok)
 13. [Demo mode & demo data](#demo-mode--demo-data)
 14. [Testing](#testing)
 15. [Frontend integration notes](#frontend-integration-notes)
@@ -158,12 +158,11 @@ automatically at startup (`app/db/indexes.py`).
 | `JWT_ALGORITHM` | JWT algorithm | `HS256` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Access token TTL | `30` |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | Refresh token TTL | `7` |
-| `LLM_PROVIDER` | LLM provider: `openai` (OpenAI-compatible) or `gemini` | `openai` |
-| `OPENAI_API_KEY` | API key for the OpenAI-compatible provider | *(empty)* |
-| `OPENAI_BASE_URL` | Base URL for the OpenAI-compatible endpoint | `https://api.openai.com/v1` |
-| `OPENAI_MODEL` | Model name for the OpenAI-compatible provider | `gpt-4o-mini` |
-| `GEMINI_API_KEY` | Optional Google Gemini key (legacy) | *(empty)* |
-| `GEMINI_MODEL` | Gemini model name | `gemini-2.0-flash` |
+| `XAI_API_KEY` | xAI API key used for optional Grok narratives | *(empty)* |
+| `XAI_BASE_URL` | xAI Responses API base URL | `https://api.x.ai/v1` |
+| `XAI_MODEL` | Grok model identifier | `grok-4.6` |
+| `XAI_TIMEOUT_SECONDS` | Bounded timeout for one Grok request | `90` |
+| `XAI_MAX_RETRIES` | Retries for transient Grok failures (0–5) | `2` |
 | `ENVIRONMENT` | `development` / `production` | `development` |
 | `CORS_ORIGINS` | Comma-separated allowed origins | `http://localhost:5173,...` |
 | `ADMIN_EMAILS` | Emails granted the `ADMIN` role | *(empty)* |
@@ -204,9 +203,9 @@ Prefix: `/api`. Full interactive docs at `/docs`.
 | Forecast | `GET /forecast/cashflow`, `POST /forecast/generate` |
 | Risk | `GET /risk`, `POST /risk/analyze`, `PUT /risk/{id}/acknowledge`, `/resolve` |
 | Loan readiness | `GET /loan-readiness`, `POST /loan-readiness/analyze` |
-| Recommendations | `GET /recommendations`, `POST /recommendations/generate`, `PUT …/acknowledge`, `/complete`, `/dismiss` |
+| Recommendations | `GET /recommendations`, `GET /recommendations/summary`, `POST /recommendations/generate`, `PUT …/acknowledge`, `/complete`, `/dismiss` |
 | Alerts | `GET /alerts`, `PATCH /alerts/{id}/read` |
-| AI CFO | `POST /ai-cfo/chat`, `POST /ai-cfo/analyze`, `POST /ai-cfo/recommend` |
+| AI CFO | `POST /ai-cfo/chat`, `POST /ai-cfo/chat/file`, `POST /ai-cfo/analyze`, `POST /ai-cfo/recommend` |
 | Reports | `GET /reports/financial-summary`, `/cashflow`, `/risk` |
 | Health | `GET /health` |
 
@@ -281,34 +280,39 @@ LLM.
 
 ---
 
-## AI CFO & LLM
+## AI CFO & Grok
 
-`POST /api/ai-cfo/chat` stores the conversation (`chat_sessions`,
-`chat_messages`) and answers using real context gathered from the engines.
+`POST /api/ai-cfo/chat` stores the local conversation (`chat_sessions`,
+`chat_messages`) and answers using real context gathered from the financial
+engines.
 
-- The configured LLM (any OpenAI-compatible endpoint via `OPENAI_BASE_URL`/
-  `OPENAI_MODEL`, or Gemini via `GEMINI_API_KEY`) **explains** the
-  pre-computed numbers.
-- Without a provider key, a deterministic explainer formats the same trusted
-  numbers.
-- The AI never performs critical financial calculations.
+### Configure xAI Grok
 
-### Switching providers
+1. Create an API key in the [xAI Console](https://console.x.ai/).
+2. Copy `backend/.env.example` to `backend/.env` and set only the key and,
+   optionally, the model:
 
-The LLM client is provider-agnostic. Set `LLM_PROVIDER=openai` and point
-`OPENAI_BASE_URL` / `OPENAI_MODEL` at any OpenAI-compatible Chat Completions
-endpoint — for example:
+```env
+XAI_API_KEY=your_xai_key_here
+XAI_BASE_URL=https://api.x.ai/v1
+XAI_MODEL=grok-4.6
+XAI_TIMEOUT_SECONDS=90
+XAI_MAX_RETRIES=2
+```
 
-| Provider | `OPENAI_BASE_URL` | Example `OPENAI_MODEL` |
-|---|---|---|
-| OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
-| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
-| Groq | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
-| OpenRouter | `https://openrouter.ai/api/v1` | `openai/gpt-4o-mini` |
-| Mistral | `https://api.mistral.ai/v1` | `mistral-small-latest` |
-| Ollama (local) | `http://localhost:11434/v1` | `llama3` |
+3. Restart the API. The frontend never receives this key; all xAI calls happen
+   server-side.
 
-Set `LLM_PROVIDER=gemini` to use Google Gemini instead.
+Grok uses xAI's **Responses API** with `store: false`. It is used only for
+explanations, summaries, insights, and AI CFO chat responses. Financial
+metrics, forecasts, scores, and recommendation rules remain deterministic
+Python calculations. If the key is absent, Grok is unavailable, or it returns
+an unusable response, the API automatically returns a deterministic explanation
+from the same trusted data instead of failing the user workflow.
+
+Image generation is not part of the AI CFO API. Image attachments remain
+available only for understanding an image within a chat request when the chosen
+Grok model supports vision.
 
 ---
 
@@ -333,7 +337,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-The suite (70 tests) covers authentication, RBAC, business isolation, CRUD for
+The suite (96 tests) covers authentication, RBAC, business isolation, CRUD for
 every domain, CSV imports (valid/invalid/duplicate), forecasting, risk, loan
 readiness, recommendations, alerts, AI CFO and the health endpoint.
 

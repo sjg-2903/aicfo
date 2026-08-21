@@ -3,6 +3,7 @@
 from functools import lru_cache
 from typing import List, Optional
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -31,25 +32,17 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # ── LLM provider (optional) ────────────────────────────────────────────
-    # Which provider powers the AI narrative / document extraction.
-    #   "openai" → any OpenAI-compatible Chat Completions endpoint
-    #              (OpenAI, DeepSeek, Groq, OpenRouter, Together, Mistral,
-    #               Azure OpenAI, vLLM / Ollama, …). Set OPENAI_BASE_URL,
-    #               OPENAI_MODEL and OPENAI_API_KEY accordingly.
-    #   "gemini" → Google Gemini (legacy).
-    # When unset / no key configured, the AI CFO uses deterministic
-    # explanations built from the trusted backend calculations (no fake numbers).
-    LLM_PROVIDER: str = "openai"
-    OPENAI_API_KEY: Optional[str] = None
-    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
-    OPENAI_MODEL: str = "gpt-4o-mini"
-    OPENAI_IMAGE_MODEL: str = "gpt-image-1"
-
-    # ── Gemini (legacy, optional) ──────────────────────────────────────────
-    GEMINI_API_KEY: Optional[str] = None
-    GEMINI_MODEL: str = "gemini-2.0-flash"
-    GEMINI_IMAGE_MODEL: str = "gemini-2.0-flash-preview-image-generation"
+    # ── xAI Grok (optional narrative layer) ─────────────────────────────────
+    # Grok is intentionally used only to explain / summarize trusted backend
+    # output and to answer chat requests. Financial calculations, forecasts,
+    # risk scoring and deterministic recommendation rules remain in Python.
+    # When no XAI_API_KEY is configured, callers fall back to deterministic
+    # explanations generated from the same calculated data.
+    XAI_API_KEY: Optional[str] = None
+    XAI_BASE_URL: str = "https://api.x.ai/v1"
+    XAI_MODEL: str = "grok-4.6"
+    XAI_TIMEOUT_SECONDS: float = Field(default=90.0, ge=5.0, le=3600.0)
+    XAI_MAX_RETRIES: int = Field(default=2, ge=0, le=5)
 
     # ── CORS / security ────────────────────────────────────────────────────
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"

@@ -20,7 +20,7 @@ export interface ImportResult {
 export interface ExtractionResult {
   file_name: string;
   import_type: string;
-  method: 'gemini' | 'openai' | 'tesseract' | 'heuristics' | 'manual';
+  method: 'tesseract' | 'heuristics' | 'manual';
   confidence: 'high' | 'medium' | 'low';
   rows: Record<string, string>[];
   raw_text: string;
