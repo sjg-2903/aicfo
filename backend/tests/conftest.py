@@ -12,9 +12,10 @@ os.environ.setdefault("MONGODB_DB_NAME", "aicfo_test")
 os.environ.setdefault("JWT_SECRET", "test-secret-that-is-long-enough-1234567890")
 os.environ.setdefault("ENVIRONMENT", "test")
 os.environ.setdefault("DEMO_MODE", "false")
-os.environ.setdefault("GEMINI_API_KEY", "")
-os.environ.setdefault("OPENAI_API_KEY", "")
-os.environ.setdefault("LLM_PROVIDER", "openai")
+# Tests must never make an external xAI request even when a developer has a
+# local key exported in their shell.
+os.environ["XAI_API_KEY"] = ""
+os.environ.setdefault("XAI_MODEL", "grok-4.6")
 os.environ.setdefault("ADMIN_EMAILS", "")
 
 import pytest

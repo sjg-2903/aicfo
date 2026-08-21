@@ -2,8 +2,8 @@
 
 Recommendations are *always* computed deterministically from the business's
 MongoDB data (metrics, health, risk, forecast, receivables, expenses, GST and
-loans). The LLM (OpenAI-compatible or Gemini) may optionally enrich the
-dashboard narrative, but never invents numbers.
+loans). Grok may optionally explain the resulting insights, but it never
+changes the trusted calculation rules or invents numbers.
 """
 
 import hashlib

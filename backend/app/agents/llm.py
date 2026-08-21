@@ -1,23 +1,21 @@
-"""LLM client with pluggable providers (OpenAI-compatible + Google Gemini).
+"""xAI Grok client used by the AI CFO narrative layer.
 
-The AI is used *only* to explain financial results that were already computed
-by trusted Python services. It never performs financial calculations.
+Grok receives only already-calculated financial context and is used to explain,
+summarize, surface insights, and answer AI CFO chat questions. It does not
+calculate financial metrics, forecasts, scores, or deterministic
+recommendations. Every caller retains a deterministic fallback when Grok is not
+configured or a request fails.
 
-Supported providers (configured via ``LLM_PROVIDER``):
-
-- ``openai`` — any OpenAI-compatible Chat Completions endpoint. This covers
-  OpenAI, DeepSeek, Groq, OpenRouter, Together AI, Mistral, xAI, Azure OpenAI
-  and self-hosted servers (vLLM / Ollama's OpenAI endpoint) by changing
-  ``OPENAI_BASE_URL`` and ``OPENAI_MODEL``.
-- ``gemini`` — Google Gemini (retained for backwards compatibility).
-
-When no provider is configured, callers fall back to deterministic
-explanations built from the trusted backend calculations (no fake numbers).
+The client uses xAI's Responses API with ``store: false`` because finance
+context may be sensitive. It intentionally does not expose image generation.
 """
 
+from __future__ import annotations
+
+import asyncio
 import base64
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 import httpx
 
@@ -25,238 +23,163 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+_RETRYABLE_STATUS_CODES = {408, 409, 425, 429, 500, 502, 503, 504}
 
 
 def active_provider() -> Optional[str]:
-    """Return the name of the configured, usable provider (``openai`` | ``gemini`` | ``None``)."""
-    provider = (settings.LLM_PROVIDER or "").strip().lower()
-    if provider == "openai" and settings.OPENAI_API_KEY:
-        return "openai"
-    if provider == "gemini" and settings.GEMINI_API_KEY:
-        return "gemini"
-    # Legacy fallback: if only GEMINI_API_KEY is set, honour it.
-    if not provider and settings.GEMINI_API_KEY:
-        return "gemini"
-    return None
+    """Return ``grok`` when an xAI key is configured, otherwise ``None``."""
+    return "grok" if settings.XAI_API_KEY and settings.XAI_API_KEY.strip() else None
 
 
 def is_available() -> bool:
+    """Whether the optional Grok narrative layer is configured."""
     return active_provider() is not None
 
 
-# ── OpenAI-compatible Chat Completions ────────────────────────────────────────
-
-def _openai_headers() -> dict:
+def _headers() -> dict[str, str]:
+    api_key = (settings.XAI_API_KEY or "").strip()
     return {
-        "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
+        "User-Agent": "aicfo-grok-client/1.0",
     }
 
 
-async def _openai_complete(system: str, user: str, max_tokens: int, temperature: float) -> Optional[str]:
-    url = f"{settings.OPENAI_BASE_URL.rstrip('/')}/chat/completions"
-    payload = {
-        "model": settings.OPENAI_MODEL,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
+def _response_text(body: dict[str, Any]) -> Optional[str]:
+    """Extract text from the xAI Responses API shape.
+
+    xAI returns output text in an ``output`` message item. Supporting the
+    common alternate shapes keeps the integration resilient to SDK/API response
+    representation changes without ever returning provider internals to users.
+    """
+    direct = body.get("output_text")
+    if isinstance(direct, str) and direct.strip():
+        return direct.strip()
+
+    text_parts: list[str] = []
+    for output in body.get("output") or []:
+        if not isinstance(output, dict) or output.get("type") != "message":
+            continue
+        for content in output.get("content") or []:
+            if isinstance(content, str):
+                text_parts.append(content)
+                continue
+            if not isinstance(content, dict):
+                continue
+            text = content.get("text") or content.get("output_text")
+            if isinstance(text, str) and text.strip():
+                text_parts.append(text.strip())
+    if text_parts:
+        return "\n".join(text_parts).strip()
+
+    # Defensive compatibility with a Chat Completions-shaped response. xAI's
+    # public endpoint is Responses, but this avoids a brittle parser if a
+    # compatible gateway is configured through XAI_BASE_URL.
+    choices = body.get("choices") or []
+    if choices and isinstance(choices[0], dict):
+        message = choices[0].get("message") or {}
+        content = message.get("content") if isinstance(message, dict) else None
+        if isinstance(content, str) and content.strip():
+            return content.strip()
+    return None
+
+
+def _retry_delay(response: Optional[httpx.Response], attempt: int) -> float:
+    """Use a bounded Retry-After delay when available, otherwise back off."""
+    if response is not None:
+        try:
+            retry_after = float(response.headers.get("Retry-After", ""))
+            if retry_after >= 0:
+                return min(retry_after, 8.0)
+        except (TypeError, ValueError):
+            pass
+    return min(0.5 * (2**attempt), 8.0)
+
+
+async def _post_response(payload: dict[str, Any], *, timeout_seconds: Optional[float] = None) -> Optional[str]:
+    """Post a single privacy-preserving request to xAI and return text.
+
+    Provider failures are logged without prompt, attachment, response body, or
+    credentials and deliberately return ``None`` so callers can use trusted
+    deterministic output instead of failing a finance workflow.
+    """
+    if not is_available():
+        return None
+
+    url = f"{settings.XAI_BASE_URL.rstrip('/')}/responses"
+    timeout = float(timeout_seconds or settings.XAI_TIMEOUT_SECONDS)
+    request_timeout = httpx.Timeout(timeout, connect=min(timeout, 20.0))
+    attempts = int(settings.XAI_MAX_RETRIES) + 1
+
+    for attempt in range(attempts):
+        response: Optional[httpx.Response] = None
+        try:
+            async with httpx.AsyncClient(timeout=request_timeout) as client:
+                response = await client.post(url, json=payload, headers=_headers())
+
+            if response.status_code in _RETRYABLE_STATUS_CODES and attempt < attempts - 1:
+                logger.warning(
+                    "Grok request received retryable status %s; retrying (%s/%s)",
+                    response.status_code,
+                    attempt + 1,
+                    attempts - 1,
+                )
+                await asyncio.sleep(_retry_delay(response, attempt))
+                continue
+
+            response.raise_for_status()
+            try:
+                body = response.json()
+            except ValueError:
+                logger.warning("Grok returned a non-JSON response; using deterministic fallback")
+                return None
+            if not isinstance(body, dict):
+                logger.warning("Grok returned an unexpected response shape; using deterministic fallback")
+                return None
+            text = _response_text(body)
+            if not text:
+                logger.warning("Grok returned no output text; using deterministic fallback")
+            return text
+        except httpx.HTTPStatusError as exc:
+            logger.warning(
+                "Grok request failed with status %s; using deterministic fallback",
+                exc.response.status_code,
+            )
+            return None
+        except (httpx.TimeoutException, httpx.NetworkError) as exc:
+            if attempt < attempts - 1:
+                logger.warning(
+                    "Grok network request failed (%s); retrying (%s/%s)",
+                    exc.__class__.__name__,
+                    attempt + 1,
+                    attempts - 1,
+                )
+                await asyncio.sleep(_retry_delay(None, attempt))
+                continue
+            logger.warning("Grok network request failed; using deterministic fallback")
+            return None
+        except httpx.HTTPError as exc:
+            logger.warning("Grok HTTP request failed (%s); using deterministic fallback", exc.__class__.__name__)
+            return None
+        except Exception as exc:  # pragma: no cover - defensive provider boundary
+            logger.warning("Grok request failed (%s); using deterministic fallback", exc.__class__.__name__)
+            return None
+
+    return None
+
+
+def _base_payload(input_items: list[dict[str, Any]], max_tokens: int, temperature: float) -> dict[str, Any]:
+    """Build an xAI Responses request with local-only conversation storage."""
+    return {
+        "model": settings.XAI_MODEL,
+        "input": input_items,
+        "max_output_tokens": max_tokens,
         "temperature": temperature,
-        "max_tokens": max_tokens,
+        # Do not retain potentially sensitive financial prompts/responses on
+        # xAI's stateful Responses service.
+        "store": False,
     }
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await client.post(url, json=payload, headers=_openai_headers())
-            resp.raise_for_status()
-            data = resp.json()
-        choices = data.get("choices") or []
-        if not choices:
-            return None
-        text = (choices[0].get("message") or {}).get("content") or ""
-        return text.strip() or None
-    except Exception as exc:
-        logger.warning("OpenAI-compatible call failed; falling back to deterministic explanation: %s", exc)
-        return None
 
-
-async def _openai_complete_vision(
-    system: str, prompt: str, image_bytes: bytes, mime_type: str, max_tokens: int,
-) -> Optional[str]:
-    url = f"{settings.OPENAI_BASE_URL.rstrip('/')}/chat/completions"
-    image_b64 = base64.b64encode(image_bytes).decode("ascii")
-    payload = {
-        "model": settings.OPENAI_MODEL,
-        "messages": [
-            {"role": "system", "content": system},
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{image_b64}"}},
-                ],
-            },
-        ],
-        "temperature": 0.1,
-        "max_tokens": max_tokens,
-    }
-    try:
-        async with httpx.AsyncClient(timeout=90.0) as client:
-            resp = await client.post(url, json=payload, headers=_openai_headers())
-            resp.raise_for_status()
-            data = resp.json()
-        choices = data.get("choices") or []
-        if not choices:
-            return None
-        text = (choices[0].get("message") or {}).get("content") or ""
-        return text.strip() or None
-    except Exception as exc:
-        logger.warning("OpenAI-compatible vision call failed; falling back to deterministic extraction: %s", exc)
-        return None
-
-
-# ── Google Gemini ─────────────────────────────────────────────────────────────
-
-async def _gemini_complete(system: str, user: str, max_tokens: int, temperature: float) -> Optional[str]:
-    url = GEMINI_ENDPOINT.format(model=settings.GEMINI_MODEL)
-    payload = {
-        "systemInstruction": {"parts": [{"text": system}]},
-        "contents": [{"role": "user", "parts": [{"text": user}]}],
-        "generationConfig": {"temperature": temperature, "maxOutputTokens": max_tokens},
-    }
-    headers = {"x-goog-api-key": settings.GEMINI_API_KEY}
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(url, json=payload, headers=headers)
-            resp.raise_for_status()
-            data = resp.json()
-        candidates = data.get("candidates") or []
-        if not candidates:
-            return None
-        parts = candidates[0].get("content", {}).get("parts", [])
-        text = "".join(p.get("text", "") for p in parts).strip()
-        return text or None
-    except Exception as exc:  # never leak credentials / fail the request
-        logger.warning("Gemini call failed; falling back to deterministic explanation: %s", exc)
-        return None
-
-
-async def _gemini_complete_vision(
-    system: str, prompt: str, image_bytes: bytes, mime_type: str, max_tokens: int,
-) -> Optional[str]:
-    url = GEMINI_ENDPOINT.format(model=settings.GEMINI_MODEL)
-    payload = {
-        "systemInstruction": {"parts": [{"text": system}]},
-        "contents": [
-            {
-                "role": "user",
-                "parts": [
-                    {"text": prompt},
-                    {"inlineData": {"mimeType": mime_type, "data": base64.b64encode(image_bytes).decode("ascii")}},
-                ],
-            }
-        ],
-        "generationConfig": {"temperature": 0.1, "maxOutputTokens": max_tokens},
-    }
-    headers = {"x-goog-api-key": settings.GEMINI_API_KEY}
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await client.post(url, json=payload, headers=headers)
-            resp.raise_for_status()
-            data = resp.json()
-        candidates = data.get("candidates") or []
-        if not candidates:
-            return None
-        parts = candidates[0].get("content", {}).get("parts", [])
-        text = "".join(p.get("text", "") for p in parts).strip()
-        return text or None
-    except Exception as exc:
-        logger.warning("Gemini vision call failed; falling back to deterministic extraction: %s", exc)
-        return None
-
-
-# ── Image generation ─────────────────────────────────────────────────────────
-
-async def _openai_generate_image(prompt: str, size: str) -> Optional[dict]:
-    url = f"{settings.OPENAI_BASE_URL.rstrip('/')}/images/generations"
-    payload = {
-        "model": settings.OPENAI_IMAGE_MODEL,
-        "prompt": prompt,
-        "size": size,
-        "n": 1,
-    }
-    try:
-        async with httpx.AsyncClient(timeout=180.0) as client:
-            response = await client.post(url, json=payload, headers=_openai_headers())
-            response.raise_for_status()
-            body = response.json()
-        images = body.get("data") or []
-        if not images:
-            return None
-        image = images[0]
-        image_url = image.get("url")
-        mime_type = "image/png"
-        if not image_url and image.get("b64_json"):
-            image_url = f"data:{mime_type};base64,{image['b64_json']}"
-        if not image_url:
-            return None
-        return {
-            "image_url": image_url,
-            "mime_type": mime_type,
-            "revised_prompt": image.get("revised_prompt") or prompt,
-            "engine": "openai",
-            "model": settings.OPENAI_IMAGE_MODEL,
-        }
-    except Exception as exc:
-        logger.warning("OpenAI-compatible image generation failed: %s", exc)
-        return None
-
-
-async def _gemini_generate_image(prompt: str, size: str) -> Optional[dict]:
-    # Gemini chooses aspect ratio through prompt/model capabilities.  Include
-    # the requested canvas as guidance while requesting both text and image.
-    url = GEMINI_ENDPOINT.format(model=settings.GEMINI_IMAGE_MODEL)
-    payload = {
-        "contents": [
-            {
-                "role": "user",
-                "parts": [{"text": f"Create this image at {size}: {prompt}"}],
-            }
-        ],
-        "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]},
-    }
-    headers = {"x-goog-api-key": settings.GEMINI_API_KEY}
-    try:
-        async with httpx.AsyncClient(timeout=180.0) as client:
-            response = await client.post(url, json=payload, headers=headers)
-            response.raise_for_status()
-            body = response.json()
-        candidates = body.get("candidates") or []
-        if not candidates:
-            return None
-        parts = candidates[0].get("content", {}).get("parts", [])
-        revised_prompt_parts = []
-        for part in parts:
-            if part.get("text"):
-                revised_prompt_parts.append(part["text"])
-            inline = part.get("inlineData") or part.get("inline_data") or {}
-            data = inline.get("data")
-            if data:
-                mime_type = inline.get("mimeType") or inline.get("mime_type") or "image/png"
-                return {
-                    "image_url": f"data:{mime_type};base64,{data}",
-                    "mime_type": mime_type,
-                    "revised_prompt": " ".join(revised_prompt_parts).strip() or prompt,
-                    "engine": "gemini",
-                    "model": settings.GEMINI_IMAGE_MODEL,
-                }
-        return None
-    except Exception as exc:
-        logger.warning("Gemini image generation failed: %s", exc)
-        return None
-
-
-# ── Public API ────────────────────────────────────────────────────────────────
 
 async def complete(
     system: str,
@@ -265,17 +188,16 @@ async def complete(
     max_tokens: int = 1024,
     temperature: float = 0.2,
 ) -> Optional[str]:
-    """Return LLM text, or ``None`` when no provider is configured / available.
-
-    Keyword-only generation controls let structured callers request enough room
-    for JSON while preserving the original two-argument API used by chat.
-    """
-    provider = active_provider()
-    if provider == "openai":
-        return await _openai_complete(system, user, max_tokens=max_tokens, temperature=temperature)
-    if provider == "gemini":
-        return await _gemini_complete(system, user, max_tokens=max_tokens, temperature=temperature)
-    return None
+    """Ask Grok for a text explanation, or return ``None`` on fallback."""
+    payload = _base_payload(
+        [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        max_tokens=max_tokens,
+        temperature=temperature,
+    )
+    return await _post_response(payload)
 
 
 async def complete_vision(
@@ -284,20 +206,31 @@ async def complete_vision(
     image_bytes: bytes,
     mime_type: str = "image/png",
 ) -> Optional[str]:
-    """Send an image + text prompt to the active provider (used for document OCR)."""
-    provider = active_provider()
-    if provider == "openai":
-        return await _openai_complete_vision(system, prompt, image_bytes, mime_type, max_tokens=2048)
-    if provider == "gemini":
-        return await _gemini_complete_vision(system, prompt, image_bytes, mime_type, max_tokens=2048)
-    return None
+    """Answer a chat question about an attached image with Grok vision.
 
-
-async def generate_image(prompt: str, size: str = "1024x1024") -> Optional[dict]:
-    """Generate an image with the active provider, returning a browser-safe URL."""
-    provider = active_provider()
-    if provider == "openai":
-        return await _openai_generate_image(prompt, size)
-    if provider == "gemini":
-        return await _gemini_generate_image(prompt, size)
-    return None
+    This is image *understanding* for the existing chat attachment flow, not
+    image generation. If the configured Grok model does not support vision, the
+    caller falls back to its locally extracted attachment context.
+    """
+    if not is_available():
+        return None
+    image_b64 = base64.b64encode(image_bytes).decode("ascii")
+    payload = _base_payload(
+        [
+            {"role": "system", "content": system},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "input_text", "text": prompt},
+                    {
+                        "type": "input_image",
+                        "image_url": f"data:{mime_type};base64,{image_b64}",
+                        "detail": "high",
+                    },
+                ],
+            },
+        ],
+        max_tokens=2048,
+        temperature=0.1,
+    )
+    return await _post_response(payload, timeout_seconds=max(settings.XAI_TIMEOUT_SECONDS, 120.0))

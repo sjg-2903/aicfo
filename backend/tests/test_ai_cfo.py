@@ -2,7 +2,6 @@
 
 from bson import ObjectId
 
-from app.agents import llm
 from app.core.constants import COLLECTIONS
 from tests.helpers import auth, register, seed_business
 
@@ -86,46 +85,16 @@ async def test_chat_rejects_file_over_15_mb(client):
     assert response.json()["error_code"] == "PAYLOAD_TOO_LARGE"
 
 
-async def test_image_generation_returns_provider_image(client, monkeypatch):
+
+async def test_image_generation_endpoint_is_removed(client):
     token = (await register(client))["access_token"]
-    requested = {}
-
-    async def fake_generate_image(prompt, size):
-        requested.update(prompt=prompt, size=size)
-        return {
-            "image_url": "data:image/png;base64,aW1hZ2U=",
-            "mime_type": "image/png",
-            "revised_prompt": prompt,
-            "engine": "openai",
-            "model": "test-image-model",
-        }
-
-    monkeypatch.setattr(llm, "generate_image", fake_generate_image)
-    response = await client.post(
-        "/api/ai-cfo/images/generate",
-        json={"prompt": "A clean cash flow chart", "size": "1536x1024"},
-        headers=auth(token),
-    )
-    assert response.status_code == 200
-    assert requested == {"prompt": "A clean cash flow chart", "size": "1536x1024"}
-    assert response.json()["data"]["image_url"].startswith("data:image/png;base64,")
-
-
-async def test_image_generation_requires_configured_provider(client, monkeypatch):
-    token = (await register(client))["access_token"]
-
-    async def unavailable_image(*_args, **_kwargs):
-        return None
-
-    monkeypatch.setattr(llm, "generate_image", unavailable_image)
-    monkeypatch.setattr(llm, "is_available", lambda: False)
     response = await client.post(
         "/api/ai-cfo/images/generate",
         json={"prompt": "A cash flow illustration"},
         headers=auth(token),
     )
-    assert response.status_code == 503
-    assert response.json()["error_code"] == "IMAGE_GENERATION_UNAVAILABLE"
+    assert response.status_code == 404
+    assert response.json()["error_code"] == "NOT_FOUND"
 
 
 async def test_analyze(client):

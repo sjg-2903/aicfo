@@ -1,9 +1,11 @@
 import apiClient from '@/lib/axios';
 
 /**
- * AI CFO Service — backed by FastAPI
+ * AI CFO Service — backed by FastAPI.
+ * Grok is invoked only by the backend for grounded explanations and chat; the
+ * browser never receives or stores an xAI key.
+ *
  *  - POST /api/ai-cfo/chat | /chat/file
- *  - POST /api/ai-cfo/images/generate
  *  - POST /api/ai-cfo/analyze | /recommend
  */
 
@@ -14,14 +16,6 @@ export interface ChatReply {
   followUps: string[];
 }
 
-export interface GeneratedImage {
-  imageUrl: string;
-  revisedPrompt: string;
-  engine: string;
-  model: string;
-  mimeType: string;
-}
-
 export interface AnalyzeResult {
   narrative: string;
   metrics: Record<string, unknown>;
@@ -29,6 +23,11 @@ export interface AnalyzeResult {
   risk: { risk_score: number; risk_level: string; risks: unknown[] };
   loanReadiness: { readiness_score: number; label: string };
 }
+
+// The backend may make several bounded Grok attempts before returning a
+// deterministic fallback, so the browser timeout must outlive that server-side
+// resilience window.
+const CHAT_TIMEOUT_MS = 420_000;
 
 class AICFOService {
   async sendMessage(message: string, sessionId?: string, file?: File): Promise<ChatReply> {
@@ -40,12 +39,17 @@ class AICFOService {
           formData.append('file', file);
           return apiClient.post('/api/ai-cfo/chat/file', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: CHAT_TIMEOUT_MS,
           });
         })()
-      : await apiClient.post('/api/ai-cfo/chat', {
-          message,
-          ...(sessionId ? { session_id: sessionId } : {}),
-        });
+      : await apiClient.post(
+          '/api/ai-cfo/chat',
+          {
+            message,
+            ...(sessionId ? { session_id: sessionId } : {}),
+          },
+          { timeout: CHAT_TIMEOUT_MS }
+        );
     const r = response.data as {
       session_id: string;
       engine?: string;
@@ -57,24 +61,6 @@ class AICFOService {
       content: r.message?.content || '',
       engine: r.engine || 'deterministic',
       followUps: r.suggested_follow_ups || [],
-    };
-  }
-
-  async generateImage(prompt: string, size = '1024x1024'): Promise<GeneratedImage> {
-    const response = await apiClient.post('/api/ai-cfo/images/generate', { prompt, size });
-    const result = response.data as {
-      image_url: string;
-      revised_prompt?: string;
-      engine: string;
-      model: string;
-      mime_type?: string;
-    };
-    return {
-      imageUrl: result.image_url,
-      revisedPrompt: result.revised_prompt || prompt,
-      engine: result.engine,
-      model: result.model,
-      mimeType: result.mime_type || 'image/png',
     };
   }
 

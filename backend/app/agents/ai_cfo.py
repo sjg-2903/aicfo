@@ -1,8 +1,8 @@
 """AI CFO agent — chat, analysis and recommendations.
 
-All numbers come from the deterministic analytics engines. The configured LLM
-(OpenAI-compatible or Gemini) is used only to *explain* these trusted
-calculations; without an API key the agent produces deterministic explanations
+All numbers come from deterministic analytics engines. Grok is used only to
+explain those trusted calculations, summarize insights, and answer chat
+questions; without an xAI key the agent produces deterministic explanations
 from the same context.
 """
 
@@ -18,6 +18,7 @@ from app.agents import llm
 from app.analytics.financial_health import compute_health_score
 from app.analytics.metrics import compute_financial_metrics
 from app.core.constants import COLLECTIONS
+from app.core.errors import BadRequestError
 from app.ml.forecast import generate_forecast
 from app.ml.loan_readiness import compute_loan_readiness
 from app.ml.risk import analyze_risk
@@ -31,7 +32,11 @@ logger = logging.getLogger(__name__)
 SYSTEM_PROMPT = (
     "You are the AI CFO assistant for an Indian MSME. Explain the provided "
     "financial data clearly and give practical, specific advice. Only use the "
-    "numbers provided in the context; never invent figures. Be concise."
+    "numbers provided in the context; never invent figures or perform new "
+    "calculations. Use clean GitHub-flavored Markdown: concise headings when "
+    "helpful, short paragraphs, bullets or numbered steps for actions, and a "
+    "table only when it makes a comparison easier to scan. Bold financial "
+    "amounts, percentages, dates, and scores. Do not use HTML. Be concise."
 )
 
 
@@ -78,6 +83,7 @@ async def build_context(db: AsyncIOMotorDatabase, business_id: Any) -> dict:
 
 
 def _deterministic_answer(question: str, ctx: dict) -> str:
+    """Format trusted engine output as readable Markdown when Grok is unavailable."""
     q = question.lower()
     m = ctx["metrics"]
     h = ctx["health"]
@@ -86,82 +92,135 @@ def _deterministic_answer(question: str, ctx: dict) -> str:
     f = ctx["forecast"]
 
     if any(k in q for k in ("health", "doing", "summary", "overview", "score")):
+        revenue_change = (
+            f" ({m['revenue']['change_pct']:+.1f}% vs last month)"
+            if m["revenue"]["change_pct"] is not None
+            else ""
+        )
+        expense_change = (
+            f" ({m['expenses']['change_pct']:+.1f}% vs last month)"
+            if m["expenses"]["change_pct"] is not None
+            else ""
+        )
         return (
-            f"Here's a snapshot of your business:\n\n"
-            f"• Revenue (this month): {inr(m['revenue']['current'])}"
-            + (f" ({m['revenue']['change_pct']:+.1f}% vs last month)" if m["revenue"]["change_pct"] is not None else "")
-            + f"\n• Expenses: {inr(m['expenses']['current'])}"
-            + (f" ({m['expenses']['change_pct']:+.1f}% vs last month)" if m["expenses"]["change_pct"] is not None else "")
-            + f"\n• Net profit: {inr(m['net_profit']['current'])}"
-            + f"\n• Cash balance: {inr(m['cash_balance']['current'])}"
-            + f"\n• Outstanding receivables: {inr(m['receivables']['outstanding'])} (overdue {inr(m['receivables']['overdue'])})"
-            + f"\n• Outstanding debt: {inr(m['debt']['outstanding'])} (monthly EMI {inr(m['debt']['monthly_emi'])})"
-            + f"\n\nFinancial health score: {h['score']}/100 ({h['label']}). "
-            + h["interpretation"]
+            "## Financial snapshot\n\n"
+            "| Metric | Current period |\n"
+            "| --- | ---: |\n"
+            f"| Revenue | **{inr(m['revenue']['current'])}**{revenue_change} |\n"
+            f"| Expenses | **{inr(m['expenses']['current'])}**{expense_change} |\n"
+            f"| Net profit | **{inr(m['net_profit']['current'])}** |\n"
+            f"| Cash balance | **{inr(m['cash_balance']['current'])}** |\n"
+            f"| Outstanding receivables | **{inr(m['receivables']['outstanding'])}** |\n"
+            f"| Outstanding debt | **{inr(m['debt']['outstanding'])}** |\n\n"
+            "### Financial health\n\n"
+            f"Your score is **{h['score']}/100** — **{h['label']}**. {h['interpretation']}\n\n"
+            f"- Overdue receivables: **{inr(m['receivables']['overdue'])}**\n"
+            f"- Monthly EMI: **{inr(m['debt']['monthly_emi'])}**"
         )
 
     if "cash" in q and ("flow" in q or "shortage" in q or "forecast" in q):
         if f:
-            return (
-                f"Cash-flow outlook (30 days, {f['model']} model, {f['confidence']} confidence):\n\n"
-                f"• Predicted net cash flow: {inr(f['predicted_net_cash_flow'])}\n"
-                f"• Minimum daily net flow: {inr(f['min_daily_net'])}\n"
-                + (f"\n⚠️ Watch item: forecast shows a shortfall on some days. Accelerate collections or arrange a credit line."
-                   if f["min_daily_net"] < 0 else "\nNo projected cash shortfall over the horizon.")
+            outlook = (
+                "> **Watch item:** The forecast shows a shortfall on some days. "
+                "Accelerate collections or arrange a credit line."
+                if f["min_daily_net"] < 0
+                else "> **Outlook:** No projected cash shortfall over the next 30 days."
             )
-        return "There isn't enough transaction history to build a reliable cash-flow forecast yet."
+            return (
+                "## 30-day cash-flow outlook\n\n"
+                f"Forecast model: **{f['model']}** with **{f['confidence']}** confidence.\n\n"
+                "| Measure | Forecast |\n"
+                "| --- | ---: |\n"
+                f"| Predicted net cash flow | **{inr(f['predicted_net_cash_flow'])}** |\n"
+                f"| Minimum daily net flow | **{inr(f['min_daily_net'])}** |\n\n"
+                f"{outlook}"
+            )
+        return (
+            "## Cash-flow outlook\n\n"
+            "There isn't enough transaction history to build a reliable cash-flow forecast yet."
+        )
 
     if "owe" in q or "receivab" in q or "invoice" in q:
         if not ctx["top_receivables"]:
-            return "You have no outstanding receivables right now."
-        lines = ["Your largest outstanding receivables:"]
+            return "## Receivables\n\nYou have no outstanding receivables right now."
+        lines = ["## Largest outstanding receivables", ""]
         for inv in ctx["top_receivables"]:
             outstanding = max(0.0, inv.get("total_amount", 0) - inv.get("paid_amount", 0))
-            lines.append(f"• {inv.get('customer_name')} — {inr(outstanding)} (due {inv.get('due_date', '')[:10]})")
-        lines.append(f"\nTotal outstanding: {inr(m['receivables']['outstanding'])}.")
+            customer = str(inv.get("customer_name") or "Unknown customer").replace("\n", " ")
+            due_date = str(inv.get("due_date", ""))[:10] or "No due date"
+            lines.append(f"- **{customer}** — **{inr(outstanding)}** due **{due_date}**")
+        lines.extend(["", f"**Total outstanding:** **{inr(m['receivables']['outstanding'])}**."])
         return "\n".join(lines)
 
     if "expense" in q or "spend" in q or "cost" in q:
         if not ctx["recent_expenses"]:
-            return "No expenses recorded yet."
-        lines = ["Recent expenses:"]
+            return "## Expenses\n\nNo expenses have been recorded yet."
+        lines = ["## Recent expenses", ""]
         for e in ctx["recent_expenses"]:
-            lines.append(f"• {e.get('date', '')[:10]} {e.get('description')} — {inr(e.get('amount', 0))}")
-        lines.append(f"\nCurrent-month expenses: {inr(m['expenses']['current'])}.")
+            date = str(e.get("date", ""))[:10] or "Undated"
+            description = str(e.get("description") or "Unlabelled expense").replace("\n", " ")
+            lines.append(f"- **{date}** — {description}: **{inr(e.get('amount', 0))}**")
+        lines.extend(["", f"**Current-month expenses:** **{inr(m['expenses']['current'])}**."])
         return "\n".join(lines)
 
     if "loan" in q or "ready" in q or "borrow" in q:
+        suggestions = "\n".join(
+            f"{index}. {suggestion}"
+            for index, suggestion in enumerate(lr["improvement_suggestions"], start=1)
+        ) or "1. Continue building a consistent transaction history."
         return (
-            f"Loan readiness: {lr['readiness_score']}/100 ({lr['label']}).\n\n"
-            + lr["overall_recommendation"]
-            + "\n\n" + "\n".join(f"• {s}" for s in lr["improvement_suggestions"])
+            "## Loan readiness\n\n"
+            f"Your score is **{lr['readiness_score']}/100** — **{lr['label']}**.\n\n"
+            f"{lr['overall_recommendation']}\n\n"
+            "### Recommended next steps\n\n"
+            f"{suggestions}"
         )
 
     if "risk" in q:
         risks = r["risks"]
         if not risks:
-            return f"No significant risks detected (risk score {r['risk_score']}/100)."
-        lines = [f"You have {len(risks)} active risk(s) (risk score {r['risk_score']}/100, level {r['risk_level']}):"]
+            return f"## Risk review\n\nNo significant risks detected. Risk score: **{r['risk_score']}/100**."
+        lines = [
+            "## Active financial risks",
+            "",
+            f"You have **{len(risks)}** active risk(s). Overall risk score: **{r['risk_score']}/100** "
+            f"(**{r['risk_level']}**).",
+        ]
         for risk in risks:
-            lines.append(f"\n• [{risk['severity'].upper()}] {risk['title']} — {risk['evidence']}\n  Recommended: {risk['recommended_action']}")
+            lines.extend(
+                [
+                    "",
+                    f"- **{risk['severity'].upper()} — {risk['title']}**",
+                    f"  - Evidence: {risk['evidence']}",
+                    f"  - Action: {risk['recommended_action']}",
+                ]
+            )
         return "\n".join(lines)
 
     if "profit" in q:
+        margin = (
+            f"| Net margin | **{pct(m['net_profit']['current'] / m['revenue']['current'] * 100)}** |\n"
+            if m["revenue"]["current"]
+            else ""
+        )
         return (
-            f"Profitability this month:\n\n"
-            f"• Revenue: {inr(m['revenue']['current'])}\n"
-            f"• Expenses: {inr(m['expenses']['current'])}\n"
-            f"• Net profit: {inr(m['net_profit']['current'])}"
-            + (f"\n• Net margin: {pct(m['net_profit']['current'] / m['revenue']['current'] * 100)}" if m["revenue"]["current"] else "")
+            "## Profitability this month\n\n"
+            "| Measure | Amount |\n"
+            "| --- | ---: |\n"
+            f"| Revenue | **{inr(m['revenue']['current'])}** |\n"
+            f"| Expenses | **{inr(m['expenses']['current'])}** |\n"
+            f"| Net profit | **{inr(m['net_profit']['current'])}** |\n"
+            f"{margin}"
         )
 
     return (
-        f"Based on your data — revenue {inr(m['revenue']['current'])} this month, "
-        f"net profit {inr(m['net_profit']['current'])}, health score {h['score']}/100 — "
-        f"your business is in {h['label'].lower()} shape. "
-        f"Ask me about cash flow, receivables, expenses, risks, loans or your financial health."
+        "## Business overview\n\n"
+        f"This month, revenue is **{inr(m['revenue']['current'])}** and net profit is "
+        f"**{inr(m['net_profit']['current'])}**. Your financial-health score is "
+        f"**{h['score']}/100** — **{h['label']}**.\n\n"
+        "Ask me about **cash flow**, **receivables**, **expenses**, **risks**, "
+        "**loans**, or your **financial health**."
     )
-
 
 def _deterministic_attachment_answer(question: str, ctx: dict, attachment: dict) -> str:
     """Useful fallback when no external model is configured for an upload."""
@@ -169,14 +228,13 @@ def _deterministic_attachment_answer(question: str, ctx: dict, attachment: dict)
     context = str(attachment.get("context") or "").strip()
     preview = context[:1800]
     if preview and preview != summary:
-        file_section = f"**File received**\n{summary}\n\n**Extracted file summary**\n{preview}"
+        file_section = f"## File received\n\n{summary}\n\n### Extracted file summary\n\n{preview}"
     else:
-        file_section = f"**File received**\n{summary}"
+        file_section = f"## File received\n\n{summary}"
     business_answer = _deterministic_answer(question, ctx)
     return (
-        f"{file_section}\n\n**Business-data context**\n{business_answer}\n\n"
-        "For deeper free-form reasoning across the attachment, configure an OpenAI-compatible "
-        "or Gemini provider in the backend."
+        f"{file_section}\n\n---\n\n## Business-data context\n\n{business_answer}\n\n"
+        "Configure **XAI_API_KEY** to enable Grok-powered reasoning across this attachment."
     )
 
 
@@ -193,7 +251,14 @@ async def chat(
 
     session = None
     if session_id:
-        session = await sessions.find_one({"_id": ObjectId(session_id), "business_id": business_id})
+        try:
+            session_object_id = ObjectId(session_id)
+        except Exception as exc:
+            raise BadRequestError(
+                "The chat session is invalid. Start a new conversation and try again.",
+                error_code="CHAT_SESSION_INVALID",
+            ) from exc
+        session = await sessions.find_one({"_id": session_object_id, "business_id": business_id})
     if not session:
         result = await sessions.insert_one(
             {"business_id": business_id, "created_at": now, "updated_at": now, "message_count": 0}

@@ -5,11 +5,10 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.agents import ai_cfo, llm
+from app.agents import ai_cfo
 from app.api.deps import get_current_business, get_db
 from app.api.response import ok
-from app.core.errors import ServiceUnavailableError
-from app.schemas.analytics import ChatRequest, ImageGenerateRequest
+from app.schemas.analytics import ChatRequest
 from app.services.chat_attachment_service import MAX_CHAT_FILE_BYTES, prepare_attachment
 
 router = APIRouter(prefix="/ai-cfo", tags=["ai-cfo"])
@@ -47,30 +46,6 @@ async def chat_with_file(
         attachment=attachment,
     )
     return ok(result, "File analyzed")
-
-
-@router.post("/images/generate")
-async def generate_image(
-    payload: ImageGenerateRequest,
-    business: dict = Depends(get_current_business),
-):
-    # Authentication/business dependency intentionally scopes this capability to
-    # signed-in users even though no ledger data is sent to the image model.
-    _ = business
-    image = await llm.generate_image(payload.prompt, payload.size)
-    if not image:
-        if not llm.is_available():
-            message = (
-                "Image generation is not configured. Add an OpenAI-compatible or "
-                "Gemini API key to the backend environment."
-            )
-        else:
-            message = (
-                "The configured AI provider could not generate this image. Check that "
-                "the configured image model supports image generation and try again."
-            )
-        raise ServiceUnavailableError(message, error_code="IMAGE_GENERATION_UNAVAILABLE")
-    return ok(image, "Image generated")
 
 
 @router.post("/analyze")

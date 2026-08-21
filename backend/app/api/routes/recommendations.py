@@ -1,21 +1,14 @@
 """Recommendation routes."""
 
-import json
-import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.agents import llm
 from app.api.deps import get_current_business, get_current_user, get_db
 from app.api.response import ok, ok_page
-from app.ml.recommendation import generate_dashboard_recommendations
 from app.schemas.analytics import RecommendationGenerateRequest
 from app.services import history_service, recommendation_service
-from app.utils.dates import utcnow
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 
@@ -42,62 +35,17 @@ async def list_recommendations(
     return ok_page(items, total, page, limit)
 
 
-@router.get("/dashboard")
-async def dashboard_recommendations(
-    limit: int = Query(6, ge=1, le=10),
-    db: AsyncIOMotorDatabase = Depends(get_db),
-    business: dict = Depends(get_current_business),
-):
-    """Fresh AI recommendations for the Dashboard (computed, not stored)."""
-    recs = await generate_dashboard_recommendations(db, business["_id"], limit=limit)
-    narrative = None
-    engine = "deterministic"
-    if llm.is_available():
-        try:
-            context = {
-                "business": business.get("business_name"),
-                "recommendations": [
-                    {"title": r["title"], "priority": r["priority"], "description": r["description"],
-                     "action": r["recommended_action"]}
-                    for r in recs
-                ],
-            }
-            narrative = await llm.complete(
-                "You are the AI CFO assistant for an Indian MSME. Summarise the provided "
-                "recommendations in 2-3 sentences using only the given data. Be concise.",
-                f"Recommendations (JSON):\n{json.dumps(context, default=str)}",
-            )
-            if narrative:
-                engine = llm.active_provider() or "gemini"
-        except Exception as exc:  # pragma: no cover
-            logger.warning("LLM narrative failed: %s", exc)
-    if not narrative and recs:
-        top = recs[0]
-        narrative = (
-            f"Top priority: {top['title'].lower()}. {len(recs)} data-driven "
-            f"recommendation(s) are ready for review."
-        )
-    return ok(
-        {
-            "generated_at": utcnow(),
-            "engine": engine,
-            "recommendations": recs,
-            "narrative": narrative,
-        }
-    )
-
-
 @router.get("/summary")
 async def summary_bullets(
     db: AsyncIOMotorDatabase = Depends(get_db),
     business: dict = Depends(get_current_business),
 ):
-    """AI-generated bullet-point sentences summarising all finance data.
+    """Return the complete financial-summary recommendations section.
 
-    The LLM analyses every finance section — transactions, invoices, expenses,
-    GST, loans, cash flow, health, risk and loan readiness — and returns
-    natural-language sentences.  Falls back to deterministic bullets when no
-    LLM is configured.
+    Both the Recommendations page and Dashboard consume this same endpoint and
+    rendering component. Deterministic recommendation rules remain the source
+    of truth; Grok may only improve the natural-language summary when it is
+    configured and returns a valid response.
     """
     result = await recommendation_service.generate_summary_bullets(db, business["_id"])
     return ok(result)
@@ -111,9 +59,9 @@ async def generate(
     user: dict = Depends(get_current_user),
 ):
     # The Generate button deliberately sends an explicit natural-language
-    # instruction.  The service adds the trusted finance analysis and the
-    # display schema, then falls back to the deterministic engine if no LLM is
-    # configured or the model returns malformed data.
+    # instruction. The service adds trusted finance analysis and the display
+    # schema, then falls back to the deterministic engine if Grok is not
+    # configured or returns malformed data.
     recs, stats = await recommendation_service.generate_with_stats(
         db, business["_id"], prompt=payload.prompt
     )
@@ -127,7 +75,7 @@ async def generate(
         entity="recommendation",
         status="success",
         message=(
-            f"Generated {generated} fresh AI recommendation(s) and removed "
+            f"Generated {generated} fresh recommendation(s) and removed "
             f"{removed} previous item(s)"
         ),
         details=stats,

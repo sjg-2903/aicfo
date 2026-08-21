@@ -25,7 +25,11 @@ services:
       JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-me}
       ENVIRONMENT: development
       CORS_ORIGINS: http://localhost:5173,http://localhost:3000
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      XAI_API_KEY: ${XAI_API_KEY:-}
+      XAI_BASE_URL: ${XAI_BASE_URL:-https://api.x.ai/v1}
+      XAI_MODEL: ${XAI_MODEL:-grok-4.6}
+      XAI_TIMEOUT_SECONDS: ${XAI_TIMEOUT_SECONDS:-90}
+      XAI_MAX_RETRIES: ${XAI_MAX_RETRIES:-2}
       DEMO_MODE: ${DEMO_MODE:-false}
     ports:
       - "8000:8000"
