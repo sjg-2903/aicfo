@@ -1,0 +1,31 @@
+invoice_number,customer_name,customer_email,invoice_date,due_date,total_amount,paid_amount,status,notes
+INV-2026-101,Sunrise Retail,ap@sunriseretail.in,2026-03-21,2026-04-20,445778.25,445778.25,paid,Settled
+INV-2026-102,Tech Innovators,finance@techinnovators.in,2026-02-18,2026-03-20,162996.36,20290.23,overdue,Net 30
+INV-2026-103,Apex Distributors,payables@apexdist.in,2026-04-10,2026-05-10,401400.67,401400.67,paid,Settled
+INV-2026-104,Proxima Ltd,ap@proximaltd.in,2026-07-01,2026-07-31,296006.44,187262.64,sent,Net 30
+INV-2026-105,Tech Innovators,finance@techinnovators.in,2026-06-18,2026-07-18,254141.53,254141.53,paid,Settled
+INV-2026-106,Global Exports,finance@globalexports.in,2026-05-08,2026-06-07,241440.94,241440.94,paid,Settled
+INV-2026-107,Vertex Solutions,billing@vertexsol.in,2026-07-29,2026-08-28,146596.83,146596.83,paid,Settled
+INV-2026-108,Vertex Solutions,billing@vertexsol.in,2026-02-12,2026-03-14,181361.23,181361.23,paid,Settled
+INV-2026-109,Sunrise Retail,ap@sunriseretail.in,2026-05-10,2026-06-09,474925.33,92898.10,overdue,Net 30
+INV-2026-110,Prime Retail,accounts@primeretail.in,2026-06-07,2026-07-07,464593.10,464593.10,paid,Settled
+INV-2026-111,Tech Innovators,finance@techinnovators.in,2026-04-26,2026-05-26,422928.74,55865.45,overdue,Net 30
+INV-2026-112,Sunrise Retail,ap@sunriseretail.in,2026-05-28,2026-06-27,48722.25,48722.25,paid,Settled
+INV-2026-113,Vertex Solutions,billing@vertexsol.in,2026-02-20,2026-03-22,247636.88,25152.07,overdue,Net 30
+INV-2026-114,Tech Innovators,finance@techinnovators.in,2026-07-17,2026-08-16,77178.11,77178.11,paid,Settled
+INV-2026-115,Proxima Ltd,ap@proximaltd.in,2026-05-09,2026-06-08,459913.14,296054.98,sent,Net 30
+INV-2026-116,Apex Distributors,payables@apexdist.in,2026-06-19,2026-07-19,57723.81,57723.81,paid,Settled
+INV-2026-117,Metro Logistics,billing@metrologistics.in,2026-03-31,2026-04-30,369083.67,369083.67,paid,Settled
+INV-2026-118,Sunrise Retail,ap@sunriseretail.in,2026-07-13,2026-08-12,350304.18,350304.18,paid,Settled
+INV-2026-119,North Star Corp,accounts@northstarcorp.in,2026-07-28,2026-08-27,173166.14,173166.14,paid,Settled
+INV-2026-120,Sunrise Retail,ap@sunriseretail.in,2026-02-15,2026-03-17,170495.09,170495.09,paid,Settled
+INV-2026-121,Sunrise Retail,ap@sunriseretail.in,2026-04-04,2026-05-04,274650.85,163763.24,sent,Net 30
+INV-2026-122,Global Exports,finance@globalexports.in,2026-03-17,2026-04-16,76588.14,14238.74,overdue,Net 30
+INV-2026-123,Proxima Ltd,ap@proximaltd.in,2026-06-08,2026-07-08,441819.11,441819.11,paid,Settled
+INV-2026-124,Delta Traders,accounts@deltatraders.in,2026-07-14,2026-08-13,153242.07,153242.07,paid,Settled
+INV-2026-125,Proxima Ltd,ap@proximaltd.in,2026-05-31,2026-06-30,436729.73,121842.27,sent,Net 30
+INV-2026-126,Vertex Solutions,billing@vertexsol.in,2026-04-30,2026-05-30,474591.44,474591.44,paid,Settled
+INV-2026-127,Global Exports,finance@globalexports.in,2026-07-27,2026-08-26,151543.02,0.00,sent,Net 30
+INV-2026-128,Vertex Solutions,billing@vertexsol.in,2026-05-10,2026-06-09,415760.93,415760.93,paid,Settled
+INV-2026-129,Apex Distributors,payables@apexdist.in,2026-06-27,2026-07-27,199224.11,199224.11,paid,Settled
+INV-2026-130,Prime Retail,accounts@primeretail.in,2026-02-06,2026-03-08,470339.68,158617.44,sent,Net 30

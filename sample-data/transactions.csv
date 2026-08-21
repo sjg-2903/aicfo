@@ -1,0 +1,202 @@
+date,description,amount,type,category,payment_method,reference_id,notes
+2026-02-01,Consulting engagement — Delta Traders,118935.76,income,Consulting,UPI,NEFT-20260201-1001,Customer collection
+2026-02-01,Monthly salaries,80982.09,expense,Salaries,Cheque,UPI-20260201-2002,
+2026-02-03,Invoice payment — Delta Traders,52386.15,income,Sales,UPI,NEFT-20260203-1003,Customer collection
+2026-02-03,Consulting engagement — Tech Innovators,27738.70,income,Consulting,UPI,NEFT-20260203-1004,Customer collection
+2026-02-03,Electricity bill,54934.44,expense,Utilities,NEFT,UPI-20260203-2005,
+2026-02-03,Raw material purchase,90383.44,expense,Raw Materials,Credit Card,UPI-20260203-2006,
+2026-02-07,Service fee — North Star Corp,75060.98,income,Services,Cheque,NEFT-20260207-1007,Customer collection
+2026-02-07,Invoice payment — Metro Logistics,157433.32,income,Sales,Cheque,NEFT-20260207-1008,Customer collection
+2026-02-07,Marketing campaign,95916.19,expense,Marketing,UPI,UPI-20260207-2009,
+2026-02-07,Monthly salaries,114921.75,expense,Salaries,UPI,UPI-20260207-2010,
+2026-02-09,Service fee — Prime Retail,229888.24,income,Services,Bank Transfer,NEFT-20260209-1011,Customer collection
+2026-02-09,Consulting engagement — Delta Traders,101638.67,income,Consulting,Cheque,NEFT-20260209-1012,Customer collection
+2026-02-09,Electricity bill,102712.38,expense,Utilities,UPI,UPI-20260209-2013,
+2026-02-12,Invoice payment — North Star Corp,153856.41,income,Sales,UPI,NEFT-20260212-1014,Customer collection
+2026-02-12,Consulting engagement — Apex Distributors,361752.23,income,Consulting,Bank Transfer,NEFT-20260212-1015,Customer collection
+2026-02-12,Electricity bill,22209.59,expense,Utilities,UPI,UPI-20260212-2016,
+2026-02-15,Invoice payment — North Star Corp,102060.64,income,Sales,Bank Transfer,NEFT-20260215-1017,Customer collection
+2026-02-15,Machine maintenance,34156.33,expense,Maintenance,Credit Card,UPI-20260215-2018,
+2026-02-15,Freight charges,27845.74,expense,Logistics,UPI,UPI-20260215-2019,
+2026-02-18,Service fee — Sunrise Retail,69244.33,income,Services,RTGS,NEFT-20260218-1020,Customer collection
+2026-02-18,Service fee — Tech Innovators,292154.07,income,Services,NEFT,NEFT-20260218-1021,Customer collection
+2026-02-18,Freight charges,28612.23,expense,Logistics,Credit Card,UPI-20260218-2022,
+2026-02-18,Office supplies,13909.13,expense,General,Bank Transfer,UPI-20260218-2023,
+2026-02-20,Consulting engagement — Sunrise Retail,172932.71,income,Consulting,Bank Transfer,NEFT-20260220-1024,Customer collection
+2026-02-20,Machine maintenance,71729.23,expense,Maintenance,UPI,UPI-20260220-2025,
+2026-02-20,Marketing campaign,114688.47,expense,Marketing,Bank Transfer,UPI-20260220-2026,
+2026-02-24,Service fee — Tech Innovators,300075.73,income,Services,Cheque,NEFT-20260224-1027,Customer collection
+2026-02-24,Marketing campaign,53280.62,expense,Marketing,UPI,UPI-20260224-2028,
+2026-02-26,Invoice payment — Tech Innovators,204319.17,income,Sales,Bank Transfer,NEFT-20260226-1029,Customer collection
+2026-02-26,Consulting engagement — Apex Distributors,204312.28,income,Consulting,UPI,NEFT-20260226-1030,Customer collection
+2026-02-26,Freight charges,90807.49,expense,Logistics,Cheque,UPI-20260226-2031,
+2026-03-02,Service fee — Prime Retail,197318.29,income,Services,Bank Transfer,NEFT-20260302-1032,Customer collection
+2026-03-02,Marketing campaign,30917.29,expense,Marketing,Credit Card,UPI-20260302-2033,
+2026-03-02,Monthly salaries,13307.32,expense,Salaries,UPI,UPI-20260302-2034,
+2026-03-04,Consulting engagement — Sunrise Retail,192428.63,income,Consulting,RTGS,NEFT-20260304-1035,Customer collection
+2026-03-04,Marketing campaign,63918.65,expense,Marketing,Cheque,UPI-20260304-2036,
+2026-03-07,Consulting engagement — Tech Innovators,271181.42,income,Consulting,Cheque,NEFT-20260307-1037,Customer collection
+2026-03-07,Freight charges,53662.46,expense,Logistics,Cheque,UPI-20260307-2038,
+2026-03-07,Office supplies,17354.98,expense,General,Credit Card,UPI-20260307-2039,
+2026-03-09,Consulting engagement — Delta Traders,221289.20,income,Consulting,RTGS,NEFT-20260309-1040,Customer collection
+2026-03-09,Invoice payment — Global Exports,44054.46,income,Sales,Bank Transfer,NEFT-20260309-1041,Customer collection
+2026-03-09,Monthly salaries,107170.59,expense,Salaries,NEFT,UPI-20260309-2042,
+2026-03-11,Consulting engagement — Apex Distributors,196147.12,income,Consulting,RTGS,NEFT-20260311-1043,Customer collection
+2026-03-11,Office supplies,31323.18,expense,General,UPI,UPI-20260311-2044,
+2026-03-14,Invoice payment — Metro Logistics,259846.67,income,Sales,Cheque,NEFT-20260314-1045,Customer collection
+2026-03-14,Machine maintenance,56974.32,expense,Maintenance,Bank Transfer,UPI-20260314-2046,
+2026-03-14,Monthly salaries,10440.15,expense,Salaries,NEFT,UPI-20260314-2047,
+2026-03-16,Invoice payment — Global Exports,214816.87,income,Sales,UPI,NEFT-20260316-1048,Customer collection
+2026-03-16,Rent payment,35393.42,expense,Rent,Credit Card,UPI-20260316-2049,
+2026-03-16,Monthly salaries,54238.47,expense,Salaries,Cheque,UPI-20260316-2050,
+2026-03-18,Invoice payment — Tech Innovators,373621.63,income,Sales,UPI,NEFT-20260318-1051,Customer collection
+2026-03-18,Machine maintenance,59105.91,expense,Maintenance,Credit Card,UPI-20260318-2052,
+2026-03-21,Service fee — Sunrise Retail,18791.02,income,Services,NEFT,NEFT-20260321-1053,Customer collection
+2026-03-21,Office supplies,36161.04,expense,General,Cheque,UPI-20260321-2054,
+2026-03-21,Office supplies,21224.24,expense,General,NEFT,UPI-20260321-2055,
+2026-03-23,Consulting engagement — Prime Retail,216985.64,income,Consulting,Cheque,NEFT-20260323-1056,Customer collection
+2026-03-23,Raw material purchase,70388.33,expense,Raw Materials,Cheque,UPI-20260323-2057,
+2026-03-27,Consulting engagement — Delta Traders,47400.91,income,Consulting,UPI,NEFT-20260327-1058,Customer collection
+2026-03-27,Monthly salaries,80811.84,expense,Salaries,Credit Card,UPI-20260327-2059,
+2026-03-30,Invoice payment — Prime Retail,230463.29,income,Sales,Bank Transfer,NEFT-20260330-1060,Customer collection
+2026-03-30,Machine maintenance,78769.23,expense,Maintenance,Cheque,UPI-20260330-2061,
+2026-04-03,Invoice payment — Apex Distributors,263789.43,income,Sales,Cheque,NEFT-20260403-1062,Customer collection
+2026-04-03,Service fee — Global Exports,163253.41,income,Services,Cheque,NEFT-20260403-1063,Customer collection
+2026-04-03,Freight charges,109872.60,expense,Logistics,Bank Transfer,UPI-20260403-2064,
+2026-04-03,Raw material purchase,55973.69,expense,Raw Materials,Cheque,UPI-20260403-2065,
+2026-04-05,Invoice payment — Tech Innovators,203659.68,income,Sales,UPI,NEFT-20260405-1066,Customer collection
+2026-04-05,Monthly salaries,104176.44,expense,Salaries,NEFT,UPI-20260405-2067,
+2026-04-05,Marketing campaign,21562.01,expense,Marketing,Cheque,UPI-20260405-2068,
+2026-04-09,Consulting engagement — Prime Retail,212121.23,income,Consulting,RTGS,NEFT-20260409-1069,Customer collection
+2026-04-09,Consulting engagement — Apex Distributors,56016.25,income,Consulting,UPI,NEFT-20260409-1070,Customer collection
+2026-04-09,Monthly salaries,105372.10,expense,Salaries,Cheque,UPI-20260409-2071,
+2026-04-09,Rent payment,34683.87,expense,Rent,Cheque,UPI-20260409-2072,
+2026-04-11,Consulting engagement — Global Exports,250765.33,income,Consulting,Cheque,NEFT-20260411-1073,Customer collection
+2026-04-11,Service fee — Tech Innovators,110161.50,income,Services,Bank Transfer,NEFT-20260411-1074,Customer collection
+2026-04-11,Machine maintenance,98460.36,expense,Maintenance,Bank Transfer,UPI-20260411-2075,
+2026-04-13,Consulting engagement — Sunrise Retail,377585.85,income,Consulting,UPI,NEFT-20260413-1076,Customer collection
+2026-04-13,Consulting engagement — Proxima Ltd,276979.95,income,Consulting,RTGS,NEFT-20260413-1077,Customer collection
+2026-04-13,Monthly salaries,12115.42,expense,Salaries,Credit Card,UPI-20260413-2078,
+2026-04-17,Consulting engagement — North Star Corp,220776.71,income,Consulting,NEFT,NEFT-20260417-1079,Customer collection
+2026-04-17,Raw material purchase,38795.58,expense,Raw Materials,Bank Transfer,UPI-20260417-2080,
+2026-04-20,Consulting engagement — Global Exports,55725.26,income,Consulting,RTGS,NEFT-20260420-1081,Customer collection
+2026-04-20,Rent payment,109499.96,expense,Rent,Credit Card,UPI-20260420-2082,
+2026-04-20,Rent payment,115275.59,expense,Rent,Credit Card,UPI-20260420-2083,
+2026-04-23,Consulting engagement — Sunrise Retail,357286.84,income,Consulting,NEFT,NEFT-20260423-1084,Customer collection
+2026-04-23,Marketing campaign,21728.15,expense,Marketing,Bank Transfer,UPI-20260423-2085,
+2026-04-26,Invoice payment — Proxima Ltd,91243.23,income,Sales,NEFT,NEFT-20260426-1086,Customer collection
+2026-04-26,Marketing campaign,97451.42,expense,Marketing,Credit Card,UPI-20260426-2087,
+2026-04-26,Electricity bill,6209.58,expense,Utilities,Credit Card,UPI-20260426-2088,
+2026-04-29,Invoice payment — Apex Distributors,372848.30,income,Sales,Cheque,NEFT-20260429-1089,Customer collection
+2026-04-29,Consulting engagement — North Star Corp,204951.88,income,Consulting,RTGS,NEFT-20260429-1090,Customer collection
+2026-04-29,Raw material purchase,16706.63,expense,Raw Materials,NEFT,UPI-20260429-2091,
+2026-04-29,Rent payment,69977.52,expense,Rent,NEFT,UPI-20260429-2092,
+2026-05-01,Service fee — Prime Retail,144867.17,income,Services,Cheque,NEFT-20260501-1093,Customer collection
+2026-05-01,Monthly salaries,47604.88,expense,Salaries,Cheque,UPI-20260501-2094,
+2026-05-01,Electricity bill,32665.73,expense,Utilities,UPI,UPI-20260501-2095,
+2026-05-03,Service fee — North Star Corp,43680.39,income,Services,Cheque,NEFT-20260503-1096,Customer collection
+2026-05-03,Monthly salaries,85911.86,expense,Salaries,NEFT,UPI-20260503-2097,
+2026-05-03,Marketing campaign,79859.24,expense,Marketing,NEFT,UPI-20260503-2098,
+2026-05-06,Invoice payment — Tech Innovators,88405.31,income,Sales,NEFT,NEFT-20260506-1099,Customer collection
+2026-05-06,Consulting engagement — Sunrise Retail,226861.63,income,Consulting,NEFT,NEFT-20260506-1100,Customer collection
+2026-05-06,Marketing campaign,36351.62,expense,Marketing,UPI,UPI-20260506-2101,
+2026-05-10,Service fee — Proxima Ltd,180272.65,income,Services,UPI,NEFT-20260510-1102,Customer collection
+2026-05-10,Service fee — Tech Innovators,309300.89,income,Services,UPI,NEFT-20260510-1103,Customer collection
+2026-05-10,Marketing campaign,62519.26,expense,Marketing,Cheque,UPI-20260510-2104,
+2026-05-13,Consulting engagement — Global Exports,131923.94,income,Consulting,UPI,NEFT-20260513-1105,Customer collection
+2026-05-13,Raw material purchase,8791.47,expense,Raw Materials,UPI,UPI-20260513-2106,
+2026-05-17,Service fee — Proxima Ltd,343212.25,income,Services,RTGS,NEFT-20260517-1107,Customer collection
+2026-05-17,Machine maintenance,60106.19,expense,Maintenance,Credit Card,UPI-20260517-2108,
+2026-05-19,Service fee — Metro Logistics,98314.70,income,Services,RTGS,NEFT-20260519-1109,Customer collection
+2026-05-19,Raw material purchase,67322.96,expense,Raw Materials,Bank Transfer,UPI-20260519-2110,
+2026-05-19,Office supplies,18767.33,expense,General,UPI,UPI-20260519-2111,
+2026-05-23,Consulting engagement — Proxima Ltd,317107.39,income,Consulting,RTGS,NEFT-20260523-1112,Customer collection
+2026-05-23,Consulting engagement — Vertex Solutions,181650.30,income,Consulting,UPI,NEFT-20260523-1113,Customer collection
+2026-05-23,Office supplies,33177.43,expense,General,Credit Card,UPI-20260523-2114,
+2026-05-23,Marketing campaign,91185.67,expense,Marketing,Cheque,UPI-20260523-2115,
+2026-05-26,Service fee — Apex Distributors,46436.39,income,Services,Cheque,NEFT-20260526-1116,Customer collection
+2026-05-26,Marketing campaign,41954.54,expense,Marketing,Cheque,UPI-20260526-2117,
+2026-05-28,Invoice payment — Sunrise Retail,158573.95,income,Sales,UPI,NEFT-20260528-1118,Customer collection
+2026-05-28,Monthly salaries,51002.37,expense,Salaries,NEFT,UPI-20260528-2119,
+2026-06-01,Invoice payment — Vertex Solutions,93908.22,income,Sales,NEFT,NEFT-20260601-1120,Customer collection
+2026-06-01,Consulting engagement — Vertex Solutions,365204.77,income,Consulting,Bank Transfer,NEFT-20260601-1121,Customer collection
+2026-06-01,Office supplies,4175.10,expense,General,NEFT,UPI-20260601-2122,
+2026-06-01,Marketing campaign,89772.90,expense,Marketing,UPI,UPI-20260601-2123,
+2026-06-05,Invoice payment — Proxima Ltd,118167.26,income,Sales,NEFT,NEFT-20260605-1124,Customer collection
+2026-06-05,Machine maintenance,41986.83,expense,Maintenance,UPI,UPI-20260605-2125,
+2026-06-09,Invoice payment — Proxima Ltd,377924.97,income,Sales,RTGS,NEFT-20260609-1126,Customer collection
+2026-06-09,Machine maintenance,71271.72,expense,Maintenance,Bank Transfer,UPI-20260609-2127,
+2026-06-11,Service fee — Sunrise Retail,84694.55,income,Services,Cheque,NEFT-20260611-1128,Customer collection
+2026-06-11,Service fee — Vertex Solutions,95679.32,income,Services,Cheque,NEFT-20260611-1129,Customer collection
+2026-06-11,Machine maintenance,35360.38,expense,Maintenance,UPI,UPI-20260611-2130,
+2026-06-11,Marketing campaign,99097.30,expense,Marketing,UPI,UPI-20260611-2131,
+2026-06-13,Invoice payment — North Star Corp,256602.88,income,Sales,Bank Transfer,NEFT-20260613-1132,Customer collection
+2026-06-13,Electricity bill,26326.80,expense,Utilities,Bank Transfer,UPI-20260613-2133,
+2026-06-17,Invoice payment — Global Exports,191796.91,income,Sales,Bank Transfer,NEFT-20260617-1134,Customer collection
+2026-06-17,Office supplies,83588.74,expense,General,NEFT,UPI-20260617-2135,
+2026-06-19,Service fee — Sunrise Retail,57672.24,income,Services,Bank Transfer,NEFT-20260619-1136,Customer collection
+2026-06-19,Machine maintenance,48916.93,expense,Maintenance,Credit Card,UPI-20260619-2137,
+2026-06-19,Monthly salaries,71295.21,expense,Salaries,Credit Card,UPI-20260619-2138,
+2026-06-21,Invoice payment — Prime Retail,310215.39,income,Sales,RTGS,NEFT-20260621-1139,Customer collection
+2026-06-21,Service fee — Delta Traders,213517.51,income,Services,Cheque,NEFT-20260621-1140,Customer collection
+2026-06-21,Freight charges,4948.67,expense,Logistics,UPI,UPI-20260621-2141,
+2026-06-24,Service fee — Vertex Solutions,251259.73,income,Services,NEFT,NEFT-20260624-1142,Customer collection
+2026-06-24,Machine maintenance,23667.68,expense,Maintenance,Cheque,UPI-20260624-2143,
+2026-06-28,Consulting engagement — Prime Retail,302293.41,income,Consulting,NEFT,NEFT-20260628-1144,Customer collection
+2026-06-28,Consulting engagement — Vertex Solutions,235438.19,income,Consulting,Cheque,NEFT-20260628-1145,Customer collection
+2026-06-28,Monthly salaries,35437.28,expense,Salaries,UPI,UPI-20260628-2146,
+2026-06-30,Consulting engagement — Prime Retail,263225.17,income,Consulting,Cheque,NEFT-20260630-1147,Customer collection
+2026-06-30,Service fee — Delta Traders,330299.69,income,Services,UPI,NEFT-20260630-1148,Customer collection
+2026-06-30,Electricity bill,44127.46,expense,Utilities,NEFT,UPI-20260630-2149,
+2026-06-30,Freight charges,35520.90,expense,Logistics,Cheque,UPI-20260630-2150,
+2026-07-04,Invoice payment — Tech Innovators,207602.20,income,Sales,UPI,NEFT-20260704-1151,Customer collection
+2026-07-04,Invoice payment — Metro Logistics,282267.40,income,Sales,NEFT,NEFT-20260704-1152,Customer collection
+2026-07-04,Office supplies,77455.88,expense,General,UPI,UPI-20260704-2153,
+2026-07-07,Service fee — Metro Logistics,99325.88,income,Services,UPI,NEFT-20260707-1154,Customer collection
+2026-07-07,Freight charges,57688.33,expense,Logistics,Cheque,UPI-20260707-2155,
+2026-07-07,Freight charges,52220.19,expense,Logistics,Cheque,UPI-20260707-2156,
+2026-07-10,Service fee — Proxima Ltd,130530.64,income,Services,UPI,NEFT-20260710-1157,Customer collection
+2026-07-10,Consulting engagement — Metro Logistics,88678.44,income,Consulting,Bank Transfer,NEFT-20260710-1158,Customer collection
+2026-07-10,Electricity bill,28276.04,expense,Utilities,UPI,UPI-20260710-2159,
+2026-07-13,Invoice payment — Metro Logistics,126722.45,income,Sales,Cheque,NEFT-20260713-1160,Customer collection
+2026-07-13,Service fee — Sunrise Retail,23192.45,income,Services,RTGS,NEFT-20260713-1161,Customer collection
+2026-07-13,Marketing campaign,8711.55,expense,Marketing,Bank Transfer,UPI-20260713-2162,
+2026-07-17,Consulting engagement — Sunrise Retail,336725.26,income,Consulting,NEFT,NEFT-20260717-1163,Customer collection
+2026-07-17,Invoice payment — Metro Logistics,228681.57,income,Sales,NEFT,NEFT-20260717-1164,Customer collection
+2026-07-17,Office supplies,42510.83,expense,General,Bank Transfer,UPI-20260717-2165,
+2026-07-17,Marketing campaign,111251.78,expense,Marketing,UPI,UPI-20260717-2166,
+2026-07-19,Service fee — Vertex Solutions,45188.16,income,Services,Bank Transfer,NEFT-20260719-1167,Customer collection
+2026-07-19,Rent payment,96375.77,expense,Rent,NEFT,UPI-20260719-2168,
+2026-07-21,Consulting engagement — Metro Logistics,298550.74,income,Consulting,RTGS,NEFT-20260721-1169,Customer collection
+2026-07-21,Machine maintenance,55083.91,expense,Maintenance,UPI,UPI-20260721-2170,
+2026-07-24,Consulting engagement — Apex Distributors,245917.03,income,Consulting,RTGS,NEFT-20260724-1171,Customer collection
+2026-07-24,Invoice payment — Metro Logistics,247564.02,income,Sales,Cheque,NEFT-20260724-1172,Customer collection
+2026-07-24,Rent payment,30964.56,expense,Rent,Cheque,UPI-20260724-2173,
+2026-07-26,Service fee — Delta Traders,183334.86,income,Services,RTGS,NEFT-20260726-1174,Customer collection
+2026-07-26,Marketing campaign,7237.26,expense,Marketing,NEFT,UPI-20260726-2175,
+2026-07-26,Marketing campaign,83992.08,expense,Marketing,UPI,UPI-20260726-2176,
+2026-07-28,Consulting engagement — Apex Distributors,234452.78,income,Consulting,UPI,NEFT-20260728-1177,Customer collection
+2026-07-28,Monthly salaries,65852.39,expense,Salaries,Credit Card,UPI-20260728-2178,
+2026-07-28,Marketing campaign,98149.27,expense,Marketing,Bank Transfer,UPI-20260728-2179,
+2026-07-30,Consulting engagement — Apex Distributors,292867.48,income,Consulting,RTGS,NEFT-20260730-1180,Customer collection
+2026-07-30,Office supplies,17738.49,expense,General,NEFT,UPI-20260730-2181,
+2026-07-30,Machine maintenance,111436.43,expense,Maintenance,Cheque,UPI-20260730-2182,
+2026-08-03,Invoice payment — Proxima Ltd,237479.45,income,Sales,NEFT,NEFT-20260803-1183,Customer collection
+2026-08-03,Consulting engagement — North Star Corp,109885.02,income,Consulting,Bank Transfer,NEFT-20260803-1184,Customer collection
+2026-08-03,Raw material purchase,117951.04,expense,Raw Materials,NEFT,UPI-20260803-2185,
+2026-08-07,Service fee — Sunrise Retail,208459.73,income,Services,NEFT,NEFT-20260807-1186,Customer collection
+2026-08-07,Rent payment,117650.26,expense,Rent,UPI,UPI-20260807-2187,
+2026-08-07,Office supplies,114456.82,expense,General,UPI,UPI-20260807-2188,
+2026-08-10,Service fee — North Star Corp,263939.00,income,Services,UPI,NEFT-20260810-1189,Customer collection
+2026-08-10,Service fee — North Star Corp,272578.24,income,Services,Cheque,NEFT-20260810-1190,Customer collection
+2026-08-10,Raw material purchase,55577.57,expense,Raw Materials,NEFT,UPI-20260810-2191,
+2026-08-10,Marketing campaign,40514.85,expense,Marketing,UPI,UPI-20260810-2192,
+2026-08-14,Service fee — Tech Innovators,169661.86,income,Services,UPI,NEFT-20260814-1193,Customer collection
+2026-08-14,Office supplies,75109.30,expense,General,Bank Transfer,UPI-20260814-2194,
+2026-08-14,Electricity bill,34077.94,expense,Utilities,Credit Card,UPI-20260814-2195,
+2026-08-17,Invoice payment — Proxima Ltd,28595.09,income,Sales,RTGS,NEFT-20260817-1196,Customer collection
+2026-08-17,Consulting engagement — Global Exports,76124.79,income,Consulting,RTGS,NEFT-20260817-1197,Customer collection
+2026-08-17,Machine maintenance,14172.45,expense,Maintenance,Bank Transfer,UPI-20260817-2198,
+2026-08-20,Service fee — Sunrise Retail,360283.67,income,Services,Cheque,NEFT-20260820-1199,Customer collection
+2026-08-20,Machine maintenance,99075.89,expense,Maintenance,UPI,UPI-20260820-2200,
+2026-08-20,Electricity bill,55802.05,expense,Utilities,Credit Card,UPI-20260820-2201,
