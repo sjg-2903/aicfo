@@ -2,6 +2,7 @@ fastapi>=0.115,<1.0
 uvicorn[standard]>=0.30
 motor>=3.5,<4.0
 pymongo>=4.7,<5.0
+dnspython>=2.6  # required for mongodb+srv:// (MongoDB Atlas) URIs
 pydantic>=2.7,<3.0
 pydantic-settings>=2.3
 email-validator>=2.1

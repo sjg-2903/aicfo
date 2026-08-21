@@ -129,17 +129,22 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ## MongoDB Atlas configuration
 
+Full laptop walkthrough: **[../LOCAL_LAPTOP_SETUP.md](../LOCAL_LAPTOP_SETUP.md)**.
+
 1. Create a cluster at [cloud.mongodb.com](https://cloud.mongodb.com).
 2. Create a database user with least-privilege access to a single database
    (e.g. `aicfo`).
 3. Allow-list your application's IP (or use VPC peering/private endpoint).
-4. Set `MONGODB_URI` to the Atlas connection string:
+4. Copy `backend/.env.example` → `backend/.env` and set `MONGODB_URI` to the
+   Atlas connection string (`dnspython` is required for `mongodb+srv://` and
+   is listed in `requirements.txt`):
 
 ```
 mongodb+srv://<user>:<password>@<cluster>.mongodb.net/aicfo?retryWrites=true&w=majority
 ```
 
-Indexes are created automatically at startup (`app/db/indexes.py`).
+URL-encode special characters in the password. Indexes are created
+automatically at startup (`app/db/indexes.py`).
 
 ---
 

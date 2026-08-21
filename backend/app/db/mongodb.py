@@ -21,10 +21,13 @@ _db: Optional[AsyncIOMotorDatabase] = None
 def get_client() -> AsyncIOMotorClient:
     global _client
     if _client is None:
+        # Atlas (`mongodb+srv://`) and local (`mongodb://`) share this client.
+        # retryWrites/w=majority can also be set on the URI query string.
         _client = AsyncIOMotorClient(
             settings.MONGODB_URI,
-            serverSelectionTimeoutMS=5000,
-            connectTimeoutMS=10000,
+            serverSelectionTimeoutMS=8000,
+            connectTimeoutMS=15000,
+            retryWrites=True,
         )
     return _client
 
