@@ -100,6 +100,10 @@ src/
 
 ```
 
+## Laptop setup (frontend + backend + MongoDB Atlas)
+
+See **[LOCAL_LAPTOP_SETUP.md](LOCAL_LAPTOP_SETUP.md)** for clone → Atlas URI → API → Vite in one place.
+
 ## Environment Setup
 
 ### Prerequisites

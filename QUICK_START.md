@@ -2,6 +2,9 @@
 
 Get the AI CFO & Financial Advisor frontend running in minutes.
 
+For the **full stack on a laptop** (Atlas + FastAPI + Vite), use
+[LOCAL_LAPTOP_SETUP.md](LOCAL_LAPTOP_SETUP.md).
+
 ## Prerequisites
 
 - **Node.js** 18+ ([Download](https://nodejs.org/))
