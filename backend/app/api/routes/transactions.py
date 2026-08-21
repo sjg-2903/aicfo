@@ -9,7 +9,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.api.deps import get_current_business, get_current_user, get_db
 from app.api.response import ok, ok_page
 from app.schemas.finance import TransactionCreate, TransactionUpdate
-from app.services import import_service, transaction_service
+from app.services import history_service, import_service, transaction_service
 from app.services.audit_service import record
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
@@ -83,8 +83,18 @@ async def import_transactions(
     user: dict = Depends(get_current_user),
 ):
     content = await file.read()
-    result = await import_service.import_csv(
+    result = await import_service.import_file(
         db, business["_id"], user["_id"], "transactions", content, file.filename or ""
     )
     await record(db, business_id=business["_id"], user_id=user["_id"], action="import", entity="transaction", meta=result)
+    await history_service.record_event(
+        db,
+        business_id=business["_id"],
+        user_id=user["_id"],
+        event_type="import",
+        entity="transactions",
+        status="success" if result["failed_rows"] == 0 else "partial",
+        message=f"Imported {result['successful_rows']} of {result['total_rows']} rows from {file.filename or 'file'}",
+        details={"file_name": file.filename or "", **result},
+    )
     return ok(result, "Import complete")

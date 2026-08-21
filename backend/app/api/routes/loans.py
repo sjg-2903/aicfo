@@ -8,7 +8,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.api.deps import get_current_business, get_current_user, get_db
 from app.api.response import ok, ok_page
 from app.schemas.finance import LoanCreate, LoanUpdate
-from app.services import import_service, loan_service
+from app.services import history_service, import_service, loan_service
 from app.services.audit_service import record
 
 router = APIRouter(prefix="/loans", tags=["loans"])
@@ -41,6 +41,16 @@ async def import_loans(
 ):
     result = await import_service.handle_upload(db, business["_id"], user["_id"], "loans", file)
     await record(db, business_id=business["_id"], user_id=user["_id"], action="import", entity="loan", meta=result)
+    await history_service.record_event(
+        db,
+        business_id=business["_id"],
+        user_id=user["_id"],
+        event_type="import",
+        entity="loans",
+        status="success" if result["failed_rows"] == 0 else "partial",
+        message=f"Imported {result['successful_rows']} of {result['total_rows']} rows from {file.filename or 'file'}",
+        details={"file_name": file.filename or "", **result},
+    )
     return ok(result, "Import complete")
 
 

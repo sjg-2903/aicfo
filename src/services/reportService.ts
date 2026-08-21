@@ -74,6 +74,52 @@ class ReportService {
       summary: `Overall risk level: ${r.risk_level} (score ${r.risk_score}/100). ${critical} risk(s) need attention.`,
     };
   }
+
+  // ── PDF reports (generated server-side, stored, re-downloadable) ──────────
+
+  async generatePdf(reportType: PdfReportType): Promise<PdfReportMeta> {
+    const response = await apiClient.post('/api/reports/pdf', { report_type: reportType }, { timeout: 180000 });
+    return response.data as PdfReportMeta;
+  }
+
+  async listPdfs(): Promise<PdfReportMeta[]> {
+    const response = await apiClient.get('/api/reports/pdf');
+    const rows: unknown[] = Array.isArray(response.data) ? response.data : [];
+    return rows as PdfReportMeta[];
+  }
+
+  async deletePdf(id: string): Promise<void> {
+    await apiClient.delete(`/api/reports/pdf/${id}`);
+  }
+
+  /** Download a stored PDF through the authenticated client. */
+  async downloadPdf(id: string, filename: string): Promise<void> {
+    const response = await apiClient.get(`/api/reports/pdf/${id}`, {
+      responseType: 'blob',
+      timeout: 120000,
+    });
+    const blob = response.data instanceof Blob ? response.data : new Blob([response.data]);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || 'aicfo-report.pdf';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+}
+
+export type PdfReportType = 'comprehensive' | 'financial_summary' | 'cash_flow' | 'risk';
+
+export interface PdfReportMeta {
+  id: string;
+  title: string;
+  report_type: PdfReportType;
+  filename: string;
+  size_bytes: number;
+  generated_at: string;
+  created_at?: string;
 }
 
 export default new ReportService();

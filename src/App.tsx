@@ -26,6 +26,7 @@ const AICFO = lazy(() => import('@/pages/AICFO'));
 const Recommendations = lazy(() => import('@/pages/Recommendations'));
 const Alerts = lazy(() => import('@/pages/Alerts'));
 const Reports = lazy(() => import('@/pages/Reports'));
+const History = lazy(() => import('@/pages/History'));
 const Profile = lazy(() => import('@/pages/Profile'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
@@ -84,6 +85,7 @@ const AppContent = () => {
               <Route path="/recommendations" element={<Recommendations />} />
               <Route path="/alerts" element={<Alerts />} />
               <Route path="/reports" element={<Reports />} />
+              <Route path="/history" element={<History />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} />
             </Route>

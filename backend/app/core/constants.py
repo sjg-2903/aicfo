@@ -21,7 +21,19 @@ COLLECTIONS = {
     "chat_sessions": "chat_sessions",
     "chat_messages": "chat_messages",
     "audit_logs": "audit_logs",
+    "history_events": "history_events",
+    "reports": "reports",
 }
+
+# ── History event types (the unified activity feed) ─────────────────────────
+HISTORY_EVENT_TYPES = (
+    "upload",              # file uploaded (CSV/Excel import)
+    "extraction",          # image/PDF document extraction (pre-confirmation)
+    "import",              # records imported/inserted (files or confirmed documents)
+    "report",              # PDF report generated
+    "recommendations",     # AI recommendations generated
+    "record",              # entity-level CRUD captured from the audit trail
+)
 
 # ── Error codes (stable machine-readable identifiers) ────────────────────────
 ERR_INVALID_TOKEN = "INVALID_TOKEN"

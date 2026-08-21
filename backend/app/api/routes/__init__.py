@@ -7,6 +7,7 @@ from app.api.routes import (
     expenses,
     forecast,
     gst,
+    history,
     invoices,
     loan_readiness,
     loans,
@@ -14,6 +15,7 @@ from app.api.routes import (
     reports,
     risk,
     transactions,
+    uploads,
 )
 
 ROUTERS = [
@@ -32,4 +34,6 @@ ROUTERS = [
     alerts.router,
     ai_cfo.router,
     reports.router,
+    uploads.router,
+    history.router,
 ]

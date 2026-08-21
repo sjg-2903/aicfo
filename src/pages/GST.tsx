@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileCheck, AlertTriangle, CalendarClock } from 'lucide-react';
+import { FileCheck, AlertTriangle, CalendarClock, Upload } from 'lucide-react';
 import { Card, PageHeader, Pill, ErrorState } from '@/components/ui';
 import { useToast } from '@/components/Toast';
+import UploadWizard from '@/components/UploadWizard';
 import { DataTable, type Column } from '@/components/DataTable';
 import { CURRENCY } from '@/lib/format';
 import { getErrorMessage } from '@/lib/axios';
@@ -19,6 +20,7 @@ export default function GST() {
 
   const [filter, setFilter] = useState<'all' | string>('all');
   const [sorting, setSorting] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'dueDate', direction: 'desc' });
+  const [showUpload, setShowUpload] = useState(false);
 
   const markFiledMutation = useMutation({
     mutationFn: (id: string) => gstService.markAsFiled(id),
@@ -74,7 +76,15 @@ export default function GST() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="GST & Tax" subtitle="Track tax obligations, filings and due dates" />
+      <PageHeader
+        title="GST & Tax"
+        subtitle="Track tax obligations, filings and due dates"
+        actions={
+          <button onClick={() => setShowUpload(true)} className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium transition">
+            <Upload className="w-4 h-4" /> Upload
+          </button>
+        }
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatusCard icon={<CalendarClock className="w-5 h-5 text-blue-600" />} label="Upcoming Filings" value={pending.length} sub="Due in next 30 days" />
@@ -110,6 +120,17 @@ export default function GST() {
           <DataTable columns={columns} data={filtered} keyExtractor={(g) => g.id} sorting={sorting} onSort={handleSort} loading={isLoading} emptyTitle="No GST records" />
         )}
       </Card>
+
+      <UploadWizard
+        entity="gst"
+        open={showUpload}
+        onClose={() => setShowUpload(false)}
+        onComplete={() => {
+          qc.invalidateQueries({ queryKey: ['gst'] });
+          qc.invalidateQueries({ queryKey: ['history'] });
+          qc.invalidateQueries({ queryKey: ['dashboard-recommendations'] });
+        }}
+      />
     </div>
   );
 }

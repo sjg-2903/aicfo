@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Download, Trash2 } from 'lucide-react';
+import { Plus, Search, Download, Trash2, Upload } from 'lucide-react';
 import { Card, PageHeader, Pill, ErrorState } from '@/components/ui';
 import { Modal } from '@/components/Modal';
+import UploadWizard from '@/components/UploadWizard';
 import { useToast } from '@/components/Toast';
 import { DataTable, Pagination, type Column } from '@/components/DataTable';
 import { CURRENCY } from '@/lib/format';
@@ -25,6 +26,7 @@ export default function Transactions() {
   const [page, setPage] = useState(1);
   const [sorting, setSorting] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
   const [showAdd, setShowAdd] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
 
   const all = txns || [];
 
@@ -134,6 +136,9 @@ export default function Transactions() {
             <button onClick={exportCsv} className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium transition">
               <Download className="w-4 h-4" /> Export
             </button>
+            <button onClick={() => setShowUpload(true)} className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium transition">
+              <Upload className="w-4 h-4" /> Upload
+            </button>
             <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition shadow-sm">
               <Plus className="w-4 h-4" /> Add Transaction
             </button>
@@ -197,6 +202,18 @@ export default function Transactions() {
       </Card>
 
       <AddTransactionModal open={showAdd} onClose={() => setShowAdd(false)} onSubmit={(p) => createMutation.mutate(p)} submitting={createMutation.isPending} />
+
+      <UploadWizard
+        entity="transactions"
+        open={showUpload}
+        onClose={() => setShowUpload(false)}
+        onComplete={() => {
+          qc.invalidateQueries({ queryKey: ['transactions'] });
+          qc.invalidateQueries({ queryKey: ['dashboard-summary'] });
+          qc.invalidateQueries({ queryKey: ['history'] });
+          qc.invalidateQueries({ queryKey: ['dashboard-recommendations'] });
+        }}
+      />
     </div>
   );
 }

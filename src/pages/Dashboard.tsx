@@ -31,6 +31,7 @@ import {
 } from 'recharts';
 import { KPICard } from '@/components/KPICard';
 import { Card, ChartCard, PageHeader, ScoreRing, ErrorState } from '@/components/ui';
+import DashboardRecommendations from '@/components/DashboardRecommendations';
 import { CURRENCY, moneyTooltip } from '@/lib/format';
 import { getErrorMessage } from '@/lib/axios';
 import { shortMonth } from '@/lib/mappers';
@@ -135,6 +136,9 @@ export default function Dashboard() {
           format="currency"
         />
       </div>
+
+      {/* AI Recommendations — data-driven insights from the recommendation engine */}
+      <DashboardRecommendations />
 
       {/* Financial health score + revenue vs expenses */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
