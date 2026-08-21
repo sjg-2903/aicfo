@@ -30,6 +30,9 @@ export interface DashboardRecommendations {
 
 const LIMIT = 500;
 
+export const RECOMMENDATION_GENERATION_PROMPT =
+  'Give me recommendations on my data analysis which contains the whole finance section like invoices, cash flow, GST, loans, expenses and transactions in the schema as defined in the recommendations display.';
+
 class RecommendationService {
   async getRecommendations(): Promise<RecommendationRow[]> {
     const response = await apiClient.get('/api/recommendations', { params: { page: 1, limit: LIMIT } });
@@ -37,8 +40,8 @@ class RecommendationService {
     return rows.map((r) => mapRecommendation(r as Parameters<typeof mapRecommendation>[0]));
   }
 
-  async generate(): Promise<RecommendationRow[]> {
-    const response = await apiClient.post('/api/recommendations/generate', {});
+  async generate(prompt = RECOMMENDATION_GENERATION_PROMPT): Promise<RecommendationRow[]> {
+    const response = await apiClient.post('/api/recommendations/generate', { prompt });
     const rows: unknown[] = Array.isArray(response.data) ? response.data : [];
     return rows.map((r) => mapRecommendation(r as Parameters<typeof mapRecommendation>[0]));
   }

@@ -21,8 +21,20 @@ class LoanReadinessAnalyzeRequest(BaseModel):
 
 
 # ── Recommendations ────────────────────────────────────────────────────────
+DEFAULT_RECOMMENDATION_PROMPT = (
+    "Give me recommendations on my data analysis which contains the whole finance "
+    "section like invoices, cash flow, GST, loans, expenses and transactions in "
+    "the schema as defined in the recommendations display."
+)
+
+
 class RecommendationGenerateRequest(BaseModel):
-    pass
+    prompt: str = Field(
+        default=DEFAULT_RECOMMENDATION_PROMPT,
+        min_length=10,
+        max_length=2000,
+        description="Instruction sent to the AI recommendation engine.",
+    )
 
 
 # ── Alerts ─────────────────────────────────────────────────────────────────
@@ -34,6 +46,11 @@ class AlertPatchRequest(BaseModel):
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     session_id: Optional[str] = None
+
+
+class ImageGenerateRequest(BaseModel):
+    prompt: str = Field(min_length=3, max_length=2000)
+    size: Literal["1024x1024", "1536x1024", "1024x1536"] = "1024x1024"
 
 
 class AnalyzeRequest(BaseModel):

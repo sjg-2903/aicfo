@@ -11,6 +11,7 @@ from app.agents import llm
 from app.api.deps import get_current_business, get_current_user, get_db
 from app.api.response import ok, ok_page
 from app.ml.recommendation import generate_dashboard_recommendations
+from app.schemas.analytics import RecommendationGenerateRequest
 from app.services import history_service, recommendation_service
 from app.utils.dates import utcnow
 
@@ -88,12 +89,20 @@ async def dashboard_recommendations(
 
 @router.post("/generate", status_code=201)
 async def generate(
+    payload: RecommendationGenerateRequest,
     db: AsyncIOMotorDatabase = Depends(get_db),
     business: dict = Depends(get_current_business),
     user: dict = Depends(get_current_user),
 ):
-    recs, stats = await recommendation_service.generate_with_stats(db, business["_id"])
-    fresh = stats["created"] + stats["revived"]
+    # The Generate button deliberately sends an explicit natural-language
+    # instruction.  The service adds the trusted finance analysis and the
+    # display schema, then falls back to the deterministic engine if no LLM is
+    # configured or the model returns malformed data.
+    recs, stats = await recommendation_service.generate_with_stats(
+        db, business["_id"], prompt=payload.prompt
+    )
+    generated = stats["created"]
+    removed = stats.get("removed", 0)
     await history_service.record_event(
         db,
         business_id=business["_id"],
@@ -102,16 +111,15 @@ async def generate(
         entity="recommendation",
         status="success",
         message=(
-            f"Generated {fresh} new and refreshed {stats['updated']} AI recommendation(s)"
+            f"Generated {generated} fresh AI recommendation(s) and removed "
+            f"{removed} previous item(s)"
         ),
         details=stats,
     )
-    message = (
-        f"Generated {fresh} new recommendation(s)"
-        if fresh
-        else f"Refreshed {stats['total']} recommendation(s) — no new items found"
+    return ok(
+        recs,
+        f"Generated {generated} fresh recommendation(s) from your finance analysis",
     )
-    return ok(recs, message)
 
 
 @router.put("/{recommendation_id}/acknowledge")

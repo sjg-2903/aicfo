@@ -1,5 +1,8 @@
 """Recommendation Engine tests."""
 
+import json
+
+from app.services import recommendation_service
 from tests.helpers import auth, register, seed_business
 
 
@@ -13,6 +16,49 @@ async def test_generate_and_list_recommendations(client):
     resp = await client.get("/api/recommendations", headers=auth(token))
     assert resp.status_code == 200
     assert resp.json()["total"] >= 1
+
+
+async def test_generate_sends_whole_finance_prompt_to_ai(client, monkeypatch):
+    token, _ = await seed_business(client)
+    captured = {}
+
+    async def fake_complete(system, user, **options):
+        captured.update(system=system, user=user, options=options)
+        return json.dumps(
+            {
+                "recommendations": [
+                    {
+                        "category": "cash_flow",
+                        "title": "Protect the cash buffer",
+                        "description": "The supplied finance analysis shows a working-capital risk.",
+                        "reason": "A cash buffer reduces payment disruption.",
+                        "priority": "high",
+                        "status": "new",
+                        "recommended_action": "Review collections and reserve upcoming obligations.",
+                        "expected_impact": "More reliable liquidity",
+                        "impact_value": 12500,
+                        "source_agent": "Cash Flow Agent",
+                    }
+                ]
+            }
+        )
+
+    monkeypatch.setattr(recommendation_service.llm, "is_available", lambda: True)
+    monkeypatch.setattr(recommendation_service.llm, "active_provider", lambda: "openai")
+    monkeypatch.setattr(recommendation_service.llm, "complete", fake_complete)
+
+    response = await client.post("/api/recommendations/generate", json={}, headers=auth(token))
+    assert response.status_code == 201
+    lowered_prompt = captured["user"].lower()
+    for section in ("invoices", "cash flow", "gst", "loans", "expenses", "transactions"):
+        assert section in lowered_prompt
+    assert "recommendation display schema" in lowered_prompt
+    assert captured["options"]["max_tokens"] == 4096
+
+    row = response.json()["data"][0]
+    assert row["title"] == "Protect the cash buffer"
+    assert row["impact_value"] == 12500
+    assert row["rid"].startswith("rec-")
 
 
 async def test_recommendation_lifecycle(client):
@@ -31,34 +77,47 @@ async def test_recommendation_lifecycle(client):
     assert dism.json()["data"]["status"] == "dismissed"
 
 
-async def test_generate_returns_full_payload_and_no_duplicates(client):
+async def test_generate_replaces_old_set_and_returns_display_schema(client):
     token, _ = await seed_business(client)
     first = await client.post("/api/recommendations/generate", json={}, headers=auth(token))
     second = await client.post("/api/recommendations/generate", json={}, headers=auth(token))
 
     first_rows = first.json()["data"]
     second_rows = second.json()["data"]
-
-    # The payload is never empty — a re-run refreshes and returns the live set.
     assert first_rows, "first generate should return recommendations"
     assert second_rows, "re-running generate must not return an empty payload"
-    assert {r["id"] for r in first_rows} == {r["id"] for r in second_rows}
 
-    # ...and no duplicate documents were inserted.
+    required = {
+        "category", "title", "description", "reason", "priority", "status",
+        "recommended_action", "expected_impact", "impact_value", "source_agent",
+        "rid", "created_at",
+    }
+    assert all(required <= row.keys() for row in second_rows)
+    assert all(row["status"] == "new" for row in second_rows)
+
+    # A click creates new Mongo documents and removes every document returned by
+    # the previous click, even if the underlying advice is still applicable.
+    first_ids = {row["id"] for row in first_rows}
+    second_ids = {row["id"] for row in second_rows}
+    assert first_ids.isdisjoint(second_ids)
+
     listing = await client.get("/api/recommendations", headers=auth(token))
-    assert listing.json()["total"] == len(first_rows)
+    listed_ids = {row["id"] for row in listing.json()["data"]}
+    assert listing.json()["total"] == len(second_rows)
+    assert listed_ids == second_ids
 
 
-async def test_generate_revives_dismissed_recommendations(client):
+async def test_generate_replaces_dismissed_recommendations(client):
     token, _ = await seed_business(client)
     generated = await client.post("/api/recommendations/generate", json={}, headers=auth(token))
-    rec = generated.json()["data"][0]
+    old_rec = generated.json()["data"][0]
 
-    await client.put(f"/api/recommendations/{rec['id']}/dismiss", headers=auth(token))
-
+    await client.put(f"/api/recommendations/{old_rec['id']}/dismiss", headers=auth(token))
     regenerated = await client.post("/api/recommendations/generate", json={}, headers=auth(token))
-    revived = [r for r in regenerated.json()["data"] if r["id"] == rec["id"]]
-    assert revived and revived[0]["status"] == "new"
+
+    new_rows = regenerated.json()["data"]
+    assert old_rec["id"] not in {row["id"] for row in new_rows}
+    assert all(row["status"] == "new" for row in new_rows)
 
 
 async def test_delete_recommendation(client):

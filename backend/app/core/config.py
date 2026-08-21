@@ -44,10 +44,12 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"
     OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_IMAGE_MODEL: str = "gpt-image-1"
 
     # ── Gemini (legacy, optional) ──────────────────────────────────────────
     GEMINI_API_KEY: Optional[str] = None
     GEMINI_MODEL: str = "gemini-2.0-flash"
+    GEMINI_IMAGE_MODEL: str = "gemini-2.0-flash-preview-image-generation"
 
     # ── CORS / security ────────────────────────────────────────────────────
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
