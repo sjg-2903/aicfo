@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Lightbulb, TrendingUp, X, Sparkles, Trash2 } from 'lucide-react';
 import { Card, PageHeader, Pill, ErrorState } from '@/components/ui';
 import { useToast } from '@/components/Toast';
 import { getErrorMessage } from '@/lib/axios';
+import { CURRENCY } from '@/lib/format';
 import recommendationService from '@/services/recommendationService';
-import type { RecommendationRow } from '@/lib/mappers';
 
 const PRIORITY_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 
@@ -19,27 +19,26 @@ export default function Recommendations() {
 
   const [priorityFilter, setPriorityFilter] = useState<'all' | string>('all');
   const [agentFilter, setAgentFilter] = useState<'all' | string>('all');
-  const generatedOnce = useRef(false);
 
   const generateMutation = useMutation({
     mutationFn: () => recommendationService.generate(),
     onSuccess: (generated) => {
-      const known = new Set((qc.getQueryData<RecommendationRow[]>(['recommendations']) || []).map((r) => r.id));
-      const fresh = generated.filter((r) => !known.has(r.id)).length;
-
-      // Show the freshly generated payload immediately, then reconcile with the server.
-      if (generated.length > 0) qc.setQueryData(['recommendations'], generated);
+      // Generate replaces the previous MongoDB set. Show that fresh payload
+      // immediately, then reconcile with the server and dashboard caches.
+      qc.setQueryData(['recommendations'], generated);
       qc.invalidateQueries({ queryKey: ['recommendations'] });
       qc.invalidateQueries({ queryKey: ['dashboard-recommendations'] });
       qc.invalidateQueries({ queryKey: ['history'] });
 
-      // Reveal whatever was just generated instead of hiding it behind stale filters.
+      // Never hide a new generation behind filters selected for the old set.
       setPriorityFilter('all');
       setAgentFilter('all');
 
-      if (fresh > 0) addToast(`Generated ${fresh} new recommendation${fresh > 1 ? 's' : ''}`, 'success');
-      else if (generated.length > 0) addToast(`Refreshed ${generated.length} recommendations — no new items found`, 'info');
-      else addToast('No recommendations could be generated yet. Add financial data first.', 'info');
+      if (generated.length > 0) {
+        addToast(`Generated ${generated.length} fresh recommendation${generated.length > 1 ? 's' : ''}`, 'success');
+      } else {
+        addToast('No recommendations could be generated yet. Add financial data first.', 'info');
+      }
     },
     onError: (e) => addToast(getErrorMessage(e), 'error'),
   });
@@ -62,15 +61,6 @@ export default function Recommendations() {
     },
     onError: (e) => addToast(getErrorMessage(e), 'error'),
   });
-
-  // Auto-generate once when the list is empty.
-  useEffect(() => {
-    if (!isLoading && !error && (!recs || recs.length === 0) && !generatedOnce.current && !generateMutation.isPending) {
-      generatedOnce.current = true;
-      generateMutation.mutate();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, error, recs]);
 
   const all = recs || [];
   const agents = ['all', ...new Set(all.map((r) => r.sourceAgent))];
@@ -145,16 +135,29 @@ export default function Recommendations() {
                         <Pill value={rec.status} />
                       </div>
                       <p className="text-sm text-slate-600 mb-2">{rec.description}</p>
+                      {rec.reason && rec.reason !== rec.description && (
+                        <p className="text-sm text-slate-500 mb-2">
+                          <span className="font-medium text-slate-700">Why:</span> {rec.reason}
+                        </p>
+                      )}
                       <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs mb-3">
                         <span className="text-slate-400">
                           Agent: <span className="font-medium text-blue-600">{rec.sourceAgent}</span>
+                        </span>
+                        <span className="text-slate-400">
+                          Category: <span className="font-medium text-slate-600">{rec.category.replace(/_/g, ' ')}</span>
                         </span>
                         {rec.impact && (
                           <span className="text-slate-400">
                             Impact: <span className="font-medium text-green-600">{rec.impact}</span>
                           </span>
                         )}
-                        {rec.date && <span className="text-slate-400">Date: {rec.date}</span>}
+                        {rec.impactValue > 0 && (
+                          <span className="text-slate-400">
+                            Impact value: <span className="font-medium text-green-600">{CURRENCY(rec.impactValue)}</span>
+                          </span>
+                        )}
+                        {rec.date && <span className="text-slate-400">Generated: {rec.date}</span>}
                       </div>
                       <div className="p-3 rounded-lg bg-slate-50 flex items-start gap-2">
                         <TrendingUp className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />

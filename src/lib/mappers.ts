@@ -104,12 +104,15 @@ export interface LoanReadinessView {
 
 export interface RecommendationRow {
   id: string;
+  rid: string;
   title: string;
   description: string;
+  reason: string;
   action: string;
   priority: string;
   status: string;
   impact: string;
+  impactValue: number;
   sourceAgent: string;
   date: string;
   category: string;
@@ -144,7 +147,7 @@ interface RawGst { id: string; period: string; period_start?: string; period_end
 interface RawLoan { id: string; lender: string; loan_type: string; start_date?: string; end_date?: string; principal_amount: number; outstanding_amount: number; interest_rate: number; emi_amount: number; next_emi_date: string | null; status: string; }
 interface RawRisk { id: string; type: string; severity: string; status?: string; impact?: number; title: string; evidence: string; recommended_action: string; }
 interface RawFactor { name: string; score: number; weight: number; status?: string; }
-interface RawRecommendation { id: string; title: string; description: string; recommended_action?: string; expected_impact?: string; priority: string; status: string; source_agent: string; created_at: string; category: string; }
+interface RawRecommendation { id: string; rid?: string; title: string; description: string; reason?: string; recommended_action?: string; expected_impact?: string; impact_value?: number; priority: string; status: string; source_agent: string; created_at: string; category: string; }
 interface RawAlert { id: string; title: string; description: string; severity: string; type: string; is_read: boolean; created_at: string; action_url?: string; }
 
 // ── Mappers ─────────────────────────────────────────────────────────────────
@@ -280,12 +283,15 @@ export function mapLoanReadiness(raw: {
 export function mapRecommendation(raw: RawRecommendation): RecommendationRow {
   return {
     id: raw.id,
+    rid: raw.rid || '',
     title: raw.title,
     description: raw.description,
+    reason: raw.reason || '',
     action: raw.recommended_action || raw.description,
     priority: raw.priority,
     status: raw.status,
     impact: raw.expected_impact || '',
+    impactValue: Number(raw.impact_value || 0),
     sourceAgent: raw.source_agent,
     date: d(raw.created_at),
     category: raw.category,

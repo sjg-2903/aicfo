@@ -175,15 +175,106 @@ async def _gemini_complete_vision(
         return None
 
 
+# ── Image generation ─────────────────────────────────────────────────────────
+
+async def _openai_generate_image(prompt: str, size: str) -> Optional[dict]:
+    url = f"{settings.OPENAI_BASE_URL.rstrip('/')}/images/generations"
+    payload = {
+        "model": settings.OPENAI_IMAGE_MODEL,
+        "prompt": prompt,
+        "size": size,
+        "n": 1,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=180.0) as client:
+            response = await client.post(url, json=payload, headers=_openai_headers())
+            response.raise_for_status()
+            body = response.json()
+        images = body.get("data") or []
+        if not images:
+            return None
+        image = images[0]
+        image_url = image.get("url")
+        mime_type = "image/png"
+        if not image_url and image.get("b64_json"):
+            image_url = f"data:{mime_type};base64,{image['b64_json']}"
+        if not image_url:
+            return None
+        return {
+            "image_url": image_url,
+            "mime_type": mime_type,
+            "revised_prompt": image.get("revised_prompt") or prompt,
+            "engine": "openai",
+            "model": settings.OPENAI_IMAGE_MODEL,
+        }
+    except Exception as exc:
+        logger.warning("OpenAI-compatible image generation failed: %s", exc)
+        return None
+
+
+async def _gemini_generate_image(prompt: str, size: str) -> Optional[dict]:
+    # Gemini chooses aspect ratio through prompt/model capabilities.  Include
+    # the requested canvas as guidance while requesting both text and image.
+    url = GEMINI_ENDPOINT.format(model=settings.GEMINI_IMAGE_MODEL)
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": f"Create this image at {size}: {prompt}"}],
+            }
+        ],
+        "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]},
+    }
+    headers = {"x-goog-api-key": settings.GEMINI_API_KEY}
+    try:
+        async with httpx.AsyncClient(timeout=180.0) as client:
+            response = await client.post(url, json=payload, headers=headers)
+            response.raise_for_status()
+            body = response.json()
+        candidates = body.get("candidates") or []
+        if not candidates:
+            return None
+        parts = candidates[0].get("content", {}).get("parts", [])
+        revised_prompt_parts = []
+        for part in parts:
+            if part.get("text"):
+                revised_prompt_parts.append(part["text"])
+            inline = part.get("inlineData") or part.get("inline_data") or {}
+            data = inline.get("data")
+            if data:
+                mime_type = inline.get("mimeType") or inline.get("mime_type") or "image/png"
+                return {
+                    "image_url": f"data:{mime_type};base64,{data}",
+                    "mime_type": mime_type,
+                    "revised_prompt": " ".join(revised_prompt_parts).strip() or prompt,
+                    "engine": "gemini",
+                    "model": settings.GEMINI_IMAGE_MODEL,
+                }
+        return None
+    except Exception as exc:
+        logger.warning("Gemini image generation failed: %s", exc)
+        return None
+
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
-async def complete(system: str, user: str) -> Optional[str]:
-    """Return LLM text, or ``None`` when no provider is configured / available."""
+async def complete(
+    system: str,
+    user: str,
+    *,
+    max_tokens: int = 1024,
+    temperature: float = 0.2,
+) -> Optional[str]:
+    """Return LLM text, or ``None`` when no provider is configured / available.
+
+    Keyword-only generation controls let structured callers request enough room
+    for JSON while preserving the original two-argument API used by chat.
+    """
     provider = active_provider()
     if provider == "openai":
-        return await _openai_complete(system, user, max_tokens=1024, temperature=0.2)
+        return await _openai_complete(system, user, max_tokens=max_tokens, temperature=temperature)
     if provider == "gemini":
-        return await _gemini_complete(system, user, max_tokens=1024, temperature=0.2)
+        return await _gemini_complete(system, user, max_tokens=max_tokens, temperature=temperature)
     return None
 
 
@@ -199,4 +290,14 @@ async def complete_vision(
         return await _openai_complete_vision(system, prompt, image_bytes, mime_type, max_tokens=2048)
     if provider == "gemini":
         return await _gemini_complete_vision(system, prompt, image_bytes, mime_type, max_tokens=2048)
+    return None
+
+
+async def generate_image(prompt: str, size: str = "1024x1024") -> Optional[dict]:
+    """Generate an image with the active provider, returning a browser-safe URL."""
+    provider = active_provider()
+    if provider == "openai":
+        return await _openai_generate_image(prompt, size)
+    if provider == "gemini":
+        return await _gemini_generate_image(prompt, size)
     return None

@@ -17,6 +17,7 @@ httpx>=0.27
 
 # File import / document processing / PDF reports
 openpyxl>=3.1        # Excel (.xlsx) imports
+xlrd>=2.0            # legacy Excel (.xls) chat attachments
 reportlab>=4.2       # professional PDF report generation
 pypdf>=4.2           # text extraction from PDF documents (OCR pre-processing)
 Pillow>=10.3         # image handling for OCR/document extraction
