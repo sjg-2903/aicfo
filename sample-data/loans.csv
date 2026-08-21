@@ -1,0 +1,5 @@
+lender,loan_type,principal_amount,outstanding_amount,interest_rate,emi_amount,start_date,end_date,next_emi_date,status
+HDFC Bank,Term Loan,6000000.00,4200000.00,10.25,142500.00,2024-08-21,2029-08-21,2026-09-05,active
+State Bank of India,Working Capital,3000000.00,2100000.00,11.40,87500.00,2024-08-21,2029-08-21,2026-09-12,active
+Tata Capital,Equipment Finance,2000000.00,1400000.00,9.85,62000.00,2024-08-21,2029-08-21,2026-09-08,active
+ICICI Bank,Term Loan,1500000.00,1050000.00,10.90,38500.00,2024-08-21,2029-08-21,2026-09-18,active

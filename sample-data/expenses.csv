@@ -1,0 +1,43 @@
+date,description,category,vendor,amount,payment_method,recurring,notes
+2026-08-19,Fire insurance premium (Aug 2026),General,HDFC Insurance,111538.71,Bank Transfer,true,Recurring monthly
+2026-08-10,Process chemicals (Aug 2026),Raw Materials,Indus Chemicals,76132.66,NEFT,false,
+2026-07-06,Internet / Airtel Business (Jul 2026),Utilities,Airtel Business,119715.88,Credit Card,true,Recurring monthly
+2026-03-21,Fire insurance premium (Mar 2026),General,HDFC Insurance,93863.26,Credit Card,true,Recurring monthly
+2026-02-25,Fire insurance premium (Feb 2026),General,HDFC Insurance,134206.05,Bank Transfer,true,Recurring monthly
+2026-08-21,Google Ads campaign (Aug 2026),Marketing,Google Ads,68149.55,Cheque,false,
+2026-08-07,Mild steel coils (Aug 2026),Raw Materials,SteelMart Suppliers,23965.61,NEFT,false,
+2026-08-11,Mild steel coils (Aug 2026),Raw Materials,SteelMart Suppliers,64533.84,Credit Card,false,
+2026-08-21,Electricity — BESCOM (Aug 2026),Utilities,BESCOM,82227.43,NEFT,true,Recurring monthly
+2026-06-09,Office stationery (Jun 2026),General,Stationery Hub,135645.94,Credit Card,false,
+2026-06-04,Google Ads campaign (Jun 2026),Marketing,Google Ads,143342.45,NEFT,false,
+2026-04-28,Packaging cartons (Apr 2026),Raw Materials,Stationery Hub,120044.41,UPI,false,
+2026-03-09,Shop-floor salaries (Mar 2026),Salaries,Payroll,112892.83,Credit Card,true,Recurring monthly
+2026-08-05,Fire insurance premium (Aug 2026),General,HDFC Insurance,101505.21,UPI,true,Recurring monthly
+2026-05-05,Office stationery (May 2026),General,Stationery Hub,18095.25,UPI,false,
+2026-04-09,Monthly factory rent (Apr 2026),Rent,Prime Properties,81822.53,UPI,true,Recurring monthly
+2026-07-23,Mild steel coils (Jul 2026),Raw Materials,SteelMart Suppliers,112158.86,NEFT,false,
+2026-05-09,Process chemicals (May 2026),Raw Materials,Indus Chemicals,122641.19,NEFT,false,
+2026-07-23,Shop-floor salaries (Jul 2026),Salaries,Payroll,38589.77,Bank Transfer,true,Recurring monthly
+2026-06-24,Process chemicals (Jun 2026),Raw Materials,Indus Chemicals,52039.30,Cheque,false,
+2026-07-16,Internet / Airtel Business (Jul 2026),Utilities,Airtel Business,14227.39,UPI,true,Recurring monthly
+2026-04-19,Packaging cartons (Apr 2026),Raw Materials,Stationery Hub,97911.39,Bank Transfer,false,
+2026-02-12,Electricity — BESCOM (Feb 2026),Utilities,BESCOM,140326.15,NEFT,true,Recurring monthly
+2026-03-02,CNC machine service (Mar 2026),Maintenance,TechServ,19079.02,Cheque,false,
+2026-05-11,Electricity — BESCOM (May 2026),Utilities,BESCOM,69980.33,Cheque,true,Recurring monthly
+2026-07-01,Inbound freight (Jul 2026),Logistics,FastFreight,111196.02,Credit Card,false,
+2026-07-18,Inbound freight (Jul 2026),Logistics,FastFreight,19340.29,UPI,false,
+2026-05-16,Process chemicals (May 2026),Raw Materials,Indus Chemicals,139296.78,NEFT,false,
+2026-07-27,Monthly factory rent (Jul 2026),Rent,Prime Properties,58111.68,UPI,true,Recurring monthly
+2026-04-02,CNC machine service (Apr 2026),Maintenance,TechServ,127358.29,Bank Transfer,false,
+2026-05-06,Fire insurance premium (May 2026),General,HDFC Insurance,82949.73,NEFT,true,Recurring monthly
+2026-05-13,Monthly factory rent (May 2026),Rent,Prime Properties,44595.87,Bank Transfer,true,Recurring monthly
+2026-02-24,CNC machine service (Feb 2026),Maintenance,TechServ,99843.38,Cheque,false,
+2026-02-13,Monthly factory rent (Feb 2026),Rent,Prime Properties,117554.27,Credit Card,true,Recurring monthly
+2026-08-21,Electricity — BESCOM (Aug 2026),Utilities,BESCOM,85821.73,Bank Transfer,true,Recurring monthly
+2026-03-26,Office stationery (Mar 2026),General,Stationery Hub,88935.50,Credit Card,false,
+2026-08-18,Mild steel coils (Aug 2026),Raw Materials,SteelMart Suppliers,26270.74,Cheque,false,
+2026-04-12,Monthly factory rent (Apr 2026),Rent,Prime Properties,127780.39,Credit Card,true,Recurring monthly
+2026-06-19,Electricity — BESCOM (Jun 2026),Utilities,BESCOM,40993.42,Credit Card,true,Recurring monthly
+2026-07-20,Shop-floor salaries (Jul 2026),Salaries,Payroll,128928.76,Credit Card,true,Recurring monthly
+2026-05-03,Monthly factory rent (May 2026),Rent,Prime Properties,118009.81,Credit Card,true,Recurring monthly
+2026-04-24,Process chemicals (Apr 2026),Raw Materials,Indus Chemicals,7453.54,NEFT,false,
