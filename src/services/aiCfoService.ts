@@ -13,6 +13,8 @@ export interface ChatReply {
   content: string;
   engine: string;
   followUps: string[];
+  /** True when the API or an external AI provider was unavailable. */
+  isFallback: boolean;
 }
 
 export interface AnalyzeResult {
@@ -53,10 +55,13 @@ class AICFOService {
         suggested_follow_ups?: string[];
         message: { content: string };
       };
+      const engine = r.engine || 'ai';
+      const hasApiContent = Boolean(r.message?.content);
       return {
         sessionId: r.session_id || sessionId || `sess-${Date.now()}`,
         content: r.message?.content || getDeterministicReply(message),
-        engine: r.engine || 'ai',
+        engine,
+        isFallback: !hasApiContent || engine === 'deterministic' || engine.includes('fallback'),
         followUps: r.suggested_follow_ups || [
           'What shall I do with my money?',
           'How can I make more money?',
@@ -69,7 +74,8 @@ class AICFOService {
       return {
         sessionId: sessionId || `sess-${Date.now()}`,
         content,
-        engine: 'ai',
+        engine: 'deterministic',
+        isFallback: true,
         followUps: [
           'What shall I do with my money?',
           'How can I make more money?',
