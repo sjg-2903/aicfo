@@ -73,19 +73,22 @@ CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 ENVIRONMENT=development
 ```
 
-Leave `XAI_API_KEY` empty unless you want Grok-powered explanations in the AI
-CFO chat. To enable it, create an xAI key and add the following to `backend/.env`:
+Leave the `AWS_*` variables empty unless you want AWS Bedrock-powered
+explanations in the AI CFO chat. To enable it, follow
+[AWS_BEDROCK_SETUP.md](AWS_BEDROCK_SETUP.md) (AWS account → enable model
+access → create an IAM access key), then add the following to `backend/.env`:
 
 ```env
-XAI_API_KEY=your_xai_key_here
-XAI_BASE_URL=https://api.x.ai/v1
-XAI_MODEL=grok-4.6
+AWS_ACCESS_KEY_ID=your_access_key_id
+AWS_SECRET_ACCESS_KEY=your_secret_access_key
+AWS_REGION=us-east-1
+BEDROCK_MODEL_ID=anthropic.claude-sonnet-4-20250514-v1:0
 ```
 
-Grok is used only for explanations, summaries, insights and chat responses;
+Bedrock is used only for explanations, summaries, insights and chat responses;
 financial calculations and recommendation rules always remain deterministic.
-Without a key, the backend uses deterministic explanations built from your own
-data.
+Without credentials, the backend uses deterministic explanations built from
+your own data.
 
 ---
 

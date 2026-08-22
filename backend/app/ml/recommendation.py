@@ -2,7 +2,7 @@
 
 Recommendations are *always* computed deterministically from the business's
 MongoDB data (metrics, health, risk, forecast, receivables, expenses, GST and
-loans). Grok may optionally explain the resulting insights, but it never
+loans). AWS Bedrock may optionally explain the resulting insights, but it never
 changes the trusted calculation rules or invents numbers.
 """
 

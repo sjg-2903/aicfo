@@ -1,183 +1,203 @@
-"""xAI Grok client used by the AI CFO narrative layer.
+"""AWS Bedrock client used by the AI CFO narrative layer.
 
-Grok receives only already-calculated financial context and is used to explain,
-summarize, surface insights, and answer AI CFO chat questions. It does not
-calculate financial metrics, forecasts, scores, or deterministic
-recommendations. Every caller retains a deterministic fallback when Grok is not
-configured or a request fails.
+Bedrock receives only already-calculated financial context and is used to
+explain, summarize, surface insights, and answer AI CFO chat questions. It
+does not calculate financial metrics, forecasts, scores, or deterministic
+recommendations. Every caller retains a deterministic fallback when Bedrock
+is not configured or a request fails.
 
-The client uses xAI's Responses API with ``store: false`` because finance
-context may be sensitive. It intentionally does not expose image generation.
+The client talks to the Bedrock **Converse API** through boto3 (wrapped in
+``asyncio.to_thread`` so the async FastAPI event loop is never blocked).
+Credentials are resolved through boto3's standard chain — explicit keys in
+``.env`` / environment variables, a named ``AWS_PROFILE`` (``~/.aws/
+credentials`` / SSO), or an attached IAM role on EC2 / ECS / EKS. AWS does
+not use Bedrock prompts or completions to train foundation models, which
+keeps potentially sensitive finance context private. The client
+intentionally does not expose image generation.
 """
 
 from __future__ import annotations
 
 import asyncio
-import base64
 import logging
 from typing import Any, Optional
 
-import httpx
+import boto3
+from botocore.config import Config
+from botocore.exceptions import BotoCoreError, ClientError
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-_RETRYABLE_STATUS_CODES = {408, 409, 425, 429, 500, 502, 503, 504}
+# Converse API image formats: https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference.html
+_IMAGE_FORMATS = {"png", "jpeg", "gif", "webp"}
+
+# One cached client per settings signature so tests that monkeypatch settings
+# get a fresh client while normal runtime reuses a single connection config.
+_CLIENT_CACHE: dict[tuple, Any] = {}
+
+
+def _session() -> boto3.Session:
+    """Build a boto3 session honouring explicit settings over the default chain."""
+    kwargs: dict[str, Any] = {"region_name": (settings.AWS_REGION or "").strip() or None}
+    profile = (settings.AWS_PROFILE or "").strip()
+    if profile:
+        kwargs["profile_name"] = profile
+    access_key = (settings.AWS_ACCESS_KEY_ID or "").strip()
+    secret_key = (settings.AWS_SECRET_ACCESS_KEY or "").strip()
+    if access_key and secret_key:
+        kwargs["aws_access_key_id"] = access_key
+        kwargs["aws_secret_access_key"] = secret_key
+        session_token = (settings.AWS_SESSION_TOKEN or "").strip()
+        if session_token:
+            kwargs["aws_session_token"] = session_token
+    return boto3.Session(**kwargs)
+
+
+def _bedrock_client() -> Any:
+    """Return a (cached) synchronous ``bedrock-runtime`` client."""
+    timeout = float(settings.BEDROCK_TIMEOUT_SECONDS)
+    cache_key = (
+        (settings.AWS_REGION or "").strip(),
+        (settings.AWS_PROFILE or "").strip(),
+        (settings.AWS_ACCESS_KEY_ID or "").strip(),
+        (settings.AWS_SECRET_ACCESS_KEY or "").strip(),
+        (settings.AWS_SESSION_TOKEN or "").strip(),
+        int(settings.BEDROCK_MAX_RETRIES),
+    )
+    client = _CLIENT_CACHE.get(cache_key)
+    if client is None:
+        client = _session().client(
+            "bedrock-runtime",
+            config=Config(
+                connect_timeout=min(int(timeout), 20),
+                read_timeout=int(timeout),
+                retries={
+                    "max_attempts": int(settings.BEDROCK_MAX_RETRIES) + 1,
+                    "mode": "standard",
+                },
+                user_agent_extra="aicfo-bedrock-client/1.0",
+            ),
+        )
+        _CLIENT_CACHE[cache_key] = client
+    return client
 
 
 def active_provider() -> Optional[str]:
-    """Return ``grok`` when an xAI key is configured, otherwise ``None``."""
-    return "grok" if settings.XAI_API_KEY and settings.XAI_API_KEY.strip() else None
+    """Return ``bedrock`` when credentials and a model are configured, else ``None``.
+
+    Credentials are resolved with boto3's full chain, so an IAM role or an
+    ``AWS_PROFILE`` works without any explicit keys in ``.env``.
+    """
+    if not (settings.BEDROCK_MODEL_ID or "").strip():
+        return None
+    try:
+        if _session().get_credentials() is None:
+            return None
+    except Exception:  # pragma: no cover - defensive provider boundary
+        return None
+    return "bedrock"
 
 
 def is_available() -> bool:
-    """Whether the optional Grok narrative layer is configured."""
+    """Whether the optional Bedrock narrative layer is configured."""
     return active_provider() is not None
 
 
-def _headers() -> dict[str, str]:
-    api_key = (settings.XAI_API_KEY or "").strip()
-    return {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-        "User-Agent": "aicfo-grok-client/1.0",
-    }
+def _image_format(mime_type: str) -> str:
+    """Normalise a MIME type to a Converse API image format."""
+    fmt = (mime_type or "").split(";")[0].strip().lower().rsplit("/", 1)[-1]
+    if fmt == "jpg":
+        fmt = "jpeg"
+    return fmt if fmt in _IMAGE_FORMATS else "png"
 
 
 def _response_text(body: dict[str, Any]) -> Optional[str]:
-    """Extract text from the xAI Responses API shape.
+    """Extract assistant text from a Bedrock Converse response.
 
-    xAI returns output text in an ``output`` message item. Supporting the
-    common alternate shapes keeps the integration resilient to SDK/API response
-    representation changes without ever returning provider internals to users.
+    The canonical shape is ``output.message.content[*].text``. The traversal is
+    deliberately defensive so a shape change degrades to a deterministic
+    fallback instead of an error.
     """
-    direct = body.get("output_text")
-    if isinstance(direct, str) and direct.strip():
-        return direct.strip()
-
+    output = body.get("output")
+    if not isinstance(output, dict):
+        return None
+    message = output.get("message")
+    if not isinstance(message, dict):
+        return None
     text_parts: list[str] = []
-    for output in body.get("output") or []:
-        if not isinstance(output, dict) or output.get("type") != "message":
-            continue
-        for content in output.get("content") or []:
-            if isinstance(content, str):
-                text_parts.append(content)
-                continue
-            if not isinstance(content, dict):
-                continue
-            text = content.get("text") or content.get("output_text")
+    for block in message.get("content") or []:
+        if isinstance(block, dict):
+            text = block.get("text")
             if isinstance(text, str) and text.strip():
                 text_parts.append(text.strip())
-    if text_parts:
-        return "\n".join(text_parts).strip()
-
-    # Defensive compatibility with a Chat Completions-shaped response. xAI's
-    # public endpoint is Responses, but this avoids a brittle parser if a
-    # compatible gateway is configured through XAI_BASE_URL.
-    choices = body.get("choices") or []
-    if choices and isinstance(choices[0], dict):
-        message = choices[0].get("message") or {}
-        content = message.get("content") if isinstance(message, dict) else None
-        if isinstance(content, str) and content.strip():
-            return content.strip()
-    return None
+    return "\n".join(text_parts).strip() if text_parts else None
 
 
-def _retry_delay(response: Optional[httpx.Response], attempt: int) -> float:
-    """Use a bounded Retry-After delay when available, otherwise back off."""
-    if response is not None:
-        try:
-            retry_after = float(response.headers.get("Retry-After", ""))
-            if retry_after >= 0:
-                return min(retry_after, 8.0)
-        except (TypeError, ValueError):
-            pass
-    return min(0.5 * (2**attempt), 8.0)
+def _invoke_converse(payload: dict[str, Any]) -> dict[str, Any]:
+    """Synchronous Converse call executed inside a worker thread."""
+    return _bedrock_client().converse(**payload)
 
 
-async def _post_response(payload: dict[str, Any], *, timeout_seconds: Optional[float] = None) -> Optional[str]:
-    """Post a single privacy-preserving request to xAI and return text.
+async def _post_response(
+    payload: dict[str, Any], *, timeout_seconds: Optional[float] = None
+) -> Optional[str]:
+    """Send a single request to Bedrock and return text.
 
-    Provider failures are logged without prompt, attachment, response body, or
-    credentials and deliberately return ``None`` so callers can use trusted
-    deterministic output instead of failing a finance workflow.
+    boto3 already retries transient throttling / server errors (bounded by
+    ``BEDROCK_MAX_RETRIES``). Remaining failures are logged without prompt,
+    attachment, response body, or credentials and deliberately return
+    ``None`` so callers can use trusted deterministic output instead of
+    failing a finance workflow.
     """
     if not is_available():
         return None
 
-    url = f"{settings.XAI_BASE_URL.rstrip('/')}/responses"
-    timeout = float(timeout_seconds or settings.XAI_TIMEOUT_SECONDS)
-    request_timeout = httpx.Timeout(timeout, connect=min(timeout, 20.0))
-    attempts = int(settings.XAI_MAX_RETRIES) + 1
+    try:
+        body = await asyncio.wait_for(
+            asyncio.to_thread(_invoke_converse, payload),
+            timeout=float(timeout_seconds or settings.BEDROCK_TIMEOUT_SECONDS) + 5.0,
+        )
+    except ClientError as exc:
+        error = exc.response.get("Error", {}) if isinstance(exc.response, dict) else {}
+        logger.warning(
+            "Bedrock request failed (%s); using deterministic fallback",
+            error.get("Code", exc.__class__.__name__),
+        )
+        return None
+    except (BotoCoreError, asyncio.TimeoutError) as exc:
+        logger.warning(
+            "Bedrock request failed (%s); using deterministic fallback",
+            exc.__class__.__name__,
+        )
+        return None
+    except Exception as exc:  # pragma: no cover - defensive provider boundary
+        logger.warning(
+            "Bedrock request failed (%s); using deterministic fallback",
+            exc.__class__.__name__,
+        )
+        return None
 
-    for attempt in range(attempts):
-        response: Optional[httpx.Response] = None
-        try:
-            async with httpx.AsyncClient(timeout=request_timeout) as client:
-                response = await client.post(url, json=payload, headers=_headers())
-
-            if response.status_code in _RETRYABLE_STATUS_CODES and attempt < attempts - 1:
-                logger.warning(
-                    "Grok request received retryable status %s; retrying (%s/%s)",
-                    response.status_code,
-                    attempt + 1,
-                    attempts - 1,
-                )
-                await asyncio.sleep(_retry_delay(response, attempt))
-                continue
-
-            response.raise_for_status()
-            try:
-                body = response.json()
-            except ValueError:
-                logger.warning("Grok returned a non-JSON response; using deterministic fallback")
-                return None
-            if not isinstance(body, dict):
-                logger.warning("Grok returned an unexpected response shape; using deterministic fallback")
-                return None
-            text = _response_text(body)
-            if not text:
-                logger.warning("Grok returned no output text; using deterministic fallback")
-            return text
-        except httpx.HTTPStatusError as exc:
-            logger.warning(
-                "Grok request failed with status %s; using deterministic fallback",
-                exc.response.status_code,
-            )
-            return None
-        except (httpx.TimeoutException, httpx.NetworkError) as exc:
-            if attempt < attempts - 1:
-                logger.warning(
-                    "Grok network request failed (%s); retrying (%s/%s)",
-                    exc.__class__.__name__,
-                    attempt + 1,
-                    attempts - 1,
-                )
-                await asyncio.sleep(_retry_delay(None, attempt))
-                continue
-            logger.warning("Grok network request failed; using deterministic fallback")
-            return None
-        except httpx.HTTPError as exc:
-            logger.warning("Grok HTTP request failed (%s); using deterministic fallback", exc.__class__.__name__)
-            return None
-        except Exception as exc:  # pragma: no cover - defensive provider boundary
-            logger.warning("Grok request failed (%s); using deterministic fallback", exc.__class__.__name__)
-            return None
-
-    return None
+    if not isinstance(body, dict):
+        logger.warning("Bedrock returned an unexpected response shape; using deterministic fallback")
+        return None
+    text = _response_text(body)
+    if not text:
+        logger.warning("Bedrock returned no output text; using deterministic fallback")
+    return text
 
 
-def _base_payload(input_items: list[dict[str, Any]], max_tokens: int, temperature: float) -> dict[str, Any]:
-    """Build an xAI Responses request with local-only conversation storage."""
+def _base_payload(messages: list[dict[str, Any]], system: str, max_tokens: int, temperature: float) -> dict[str, Any]:
+    """Build a Bedrock Converse request."""
     return {
-        "model": settings.XAI_MODEL,
-        "input": input_items,
-        "max_output_tokens": max_tokens,
-        "temperature": temperature,
-        # Do not retain potentially sensitive financial prompts/responses on
-        # xAI's stateful Responses service.
-        "store": False,
+        "modelId": settings.BEDROCK_MODEL_ID.strip(),
+        "system": [{"text": system}],
+        "messages": messages,
+        "inferenceConfig": {
+            "maxTokens": max_tokens,
+            "temperature": temperature,
+        },
     }
 
 
@@ -188,12 +208,10 @@ async def complete(
     max_tokens: int = 1024,
     temperature: float = 0.2,
 ) -> Optional[str]:
-    """Ask Grok for a text explanation, or return ``None`` on fallback."""
+    """Ask Bedrock for a text explanation, or return ``None`` on fallback."""
     payload = _base_payload(
-        [
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
+        [{"role": "user", "content": [{"text": user}]}],
+        system,
         max_tokens=max_tokens,
         temperature=temperature,
     )
@@ -206,31 +224,29 @@ async def complete_vision(
     image_bytes: bytes,
     mime_type: str = "image/png",
 ) -> Optional[str]:
-    """Answer a chat question about an attached image with Grok vision.
+    """Answer a chat question about an attached image with Bedrock vision.
 
     This is image *understanding* for the existing chat attachment flow, not
-    image generation. If the configured Grok model does not support vision, the
-    caller falls back to its locally extracted attachment context.
+    image generation. If the configured Bedrock model does not support vision,
+    the caller falls back to its locally extracted attachment context.
     """
-    if not is_available():
-        return None
-    image_b64 = base64.b64encode(image_bytes).decode("ascii")
     payload = _base_payload(
         [
-            {"role": "system", "content": system},
             {
                 "role": "user",
                 "content": [
-                    {"type": "input_text", "text": prompt},
+                    {"text": prompt},
                     {
-                        "type": "input_image",
-                        "image_url": f"data:{mime_type};base64,{image_b64}",
-                        "detail": "high",
+                        "image": {
+                            "format": _image_format(mime_type),
+                            "source": {"bytes": image_bytes},
+                        }
                     },
                 ],
-            },
+            }
         ],
+        system,
         max_tokens=2048,
         temperature=0.1,
     )
-    return await _post_response(payload, timeout_seconds=max(settings.XAI_TIMEOUT_SECONDS, 120.0))
+    return await _post_response(payload, timeout_seconds=max(settings.BEDROCK_TIMEOUT_SECONDS, 120.0))

@@ -3,7 +3,7 @@
 Chat accepts any non-empty file up to 15 MB. Known office, data, document, text
 and image formats receive richer extraction; every other binary format gets a
 safe metadata summary. Files are never executed or imported into the business
-ledgers. Images retain their bytes only in memory for Grok image understanding
+ledgers. Images retain their bytes only in memory for Bedrock image understanding
 within the active chat request; this module never generates images.
 """
 

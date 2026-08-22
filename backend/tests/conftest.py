@@ -12,10 +12,12 @@ os.environ.setdefault("MONGODB_DB_NAME", "aicfo_test")
 os.environ.setdefault("JWT_SECRET", "test-secret-that-is-long-enough-1234567890")
 os.environ.setdefault("ENVIRONMENT", "test")
 os.environ.setdefault("DEMO_MODE", "false")
-# Tests must never make an external xAI request even when a developer has a
-# local key exported in their shell.
-os.environ["XAI_API_KEY"] = ""
-os.environ.setdefault("XAI_MODEL", "grok-4.6")
+# Tests must never make an external AWS Bedrock request even when a developer
+# has real credentials exported in their shell or in ~/.aws/credentials.
+for _var in ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "AWS_PROFILE"):
+    os.environ.pop(_var, None)
+os.environ.setdefault("BEDROCK_MODEL_ID", "anthropic.claude-test-model")
+os.environ.setdefault("AWS_REGION", "us-east-1")
 os.environ.setdefault("ADMIN_EMAILS", "")
 
 import pytest
