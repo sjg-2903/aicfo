@@ -602,7 +602,7 @@ export default function Landing() {
             {[
               { value: 500, prefix: '₹', suffix: 'Cr+', label: 'MSME Ledgers Monitored' },
               { value: 98, suffix: '.4%', label: 'Cash Flow Forecast Accuracy' },
-              { value: 7, suffix: ' Agents', label: 'Autonomous AI Finance Agents' },
+              { value: 8, suffix: ' Agents', label: 'Autonomous AI Finance Agents' },
               { value: 14, suffix: ' Days', label: 'Average Net-DSO Reduction' },
             ].map((stat) => (
               <motion.div
@@ -968,30 +968,50 @@ export default function Landing() {
             </motion.p>
           </motion.div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { name: 'Cash Flow Agent', role: '30-Day ML Inflow/Outflow Forecasting' },
-              { name: 'Invoice Agent', role: 'DSO Reduction & Payment Follow-ups' },
-              { name: 'Risk Radar Agent', role: 'Debtor Concentration & Anomaly Scan' },
-              { name: 'GST & Tax Agent', role: 'ITC Max & GSTR-1/3B Compliance' },
-              { name: 'Expense Agent', role: 'SaaS Audit & Margin Leakage Shield' },
-              { name: 'Loan & Debt Agent', role: 'DSCR Coverage & Prepayment Models' },
-              { name: 'AI CFO Advisory', role: 'Gemini-Powered Capital Strategy' },
-              { name: 'Health Agent', role: '5-Pillar MSME Ratio Score Benchmark' },
-            ].map((agent) => (
-              <motion.div
-                key={agent.name}
-                whileHover={{ y: -3 }}
-                className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-blue-500/50 transition-all text-center"
-              >
-                <div className="flex items-center justify-center gap-1.5 mb-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] font-mono text-emerald-400 uppercase">Operational</span>
-                </div>
-                <h4 className="text-sm font-bold text-white mb-1">{agent.name}</h4>
-                <p className="text-[11px] text-slate-400 leading-tight">{agent.role}</p>
-              </motion.div>
-            ))}
+              { name: 'Cash Flow Agent', role: '30-Day ML Inflow/Outflow Forecasting', icon: TrendingUp, accent: 'from-sky-500 to-blue-600' },
+              { name: 'Invoice Agent', role: 'DSO Reduction & Payment Follow-ups', icon: Receipt, accent: 'from-emerald-500 to-teal-600' },
+              { name: 'Risk Radar Agent', role: 'Debtor Concentration & Anomaly Scan', icon: ShieldAlert, accent: 'from-rose-500 to-red-600' },
+              { name: 'GST & Tax Agent', role: 'ITC Max & GSTR-1/3B Compliance', icon: Landmark, accent: 'from-amber-500 to-orange-600' },
+              { name: 'Expense Agent', role: 'SaaS Audit & Margin Leakage Shield', icon: Wallet, accent: 'from-violet-500 to-purple-600' },
+              { name: 'Loan & Debt Agent', role: 'DSCR Coverage & Prepayment Models', icon: Banknote, accent: 'from-indigo-500 to-blue-600' },
+              { name: 'AI CFO Advisory', role: 'Gemini-Powered Capital Strategy', icon: BrainCircuit, accent: 'from-fuchsia-500 to-pink-600' },
+              { name: 'Health Agent', role: '5-Pillar MSME Ratio Score Benchmark', icon: Gauge, accent: 'from-cyan-500 to-sky-600' },
+            ].map((agent, idx) => {
+              const AgentIcon = agent.icon;
+              return (
+                <motion.div
+                  key={agent.name}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: idx * 0.05, duration: 0.4, ease: EASE_OUT }}
+                  whileHover={{ y: -6 }}
+                  className="group relative p-5 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-slate-600 backdrop-blur-sm overflow-hidden transition-all duration-300"
+                >
+                  {/* Ambient gradient glow on hover */}
+                  <div
+                    className={`absolute -top-10 -right-10 w-28 h-28 rounded-full bg-gradient-to-br ${agent.accent} opacity-0 group-hover:opacity-25 blur-2xl transition-opacity duration-500 pointer-events-none`}
+                  />
+                  <div className="relative flex items-center justify-between mb-4">
+                    <div
+                      className={`w-11 h-11 rounded-xl bg-gradient-to-br ${agent.accent} flex items-center justify-center text-white shadow-lg shadow-slate-950/40 ring-1 ring-white/10 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3`}
+                    >
+                      <AgentIcon className="w-5 h-5" />
+                    </div>
+                    <span className="flex items-center gap-1.5 text-[10px] font-mono font-semibold text-emerald-400 uppercase tracking-wider">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Live
+                    </span>
+                  </div>
+                  <h4 className="relative text-sm font-bold text-white mb-1 group-hover:text-blue-300 transition-colors">
+                    {agent.name}
+                  </h4>
+                  <p className="relative text-[11px] text-slate-400 leading-relaxed">{agent.role}</p>
+                </motion.div>
+              );
+            })}
           </div>
 
           <p className="text-center text-xs text-slate-500 mt-8">

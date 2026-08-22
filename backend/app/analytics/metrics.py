@@ -45,6 +45,21 @@ async def fetch_transactions(
     return await _fetch(db, COLLECTIONS["transactions"], business_id, q)
 
 
+async def has_financial_data(db: AsyncIOMotorDatabase, business_id: Any) -> bool:
+    """Return True if the business has any imported financial records.
+
+    Used by the scoring engines so that a brand-new (empty) account reports a
+    neutral zero state instead of a misleading default score.
+    """
+    for collection in ("transactions", "invoices", "expenses", "loans", "gst_records"):
+        count = await db[COLLECTIONS[collection]].count_documents(
+            {"business_id": business_id}
+        )
+        if count:
+            return True
+    return False
+
+
 async def compute_financial_metrics(
     db: AsyncIOMotorDatabase, business_id: Any, now: Optional[datetime] = None,
 ) -> dict:

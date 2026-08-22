@@ -7,7 +7,11 @@ from typing import Any, Optional
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.analytics.financial_health import compute_health_score
-from app.analytics.metrics import compute_financial_metrics, compute_monthly_series
+from app.analytics.metrics import (
+    compute_financial_metrics,
+    compute_monthly_series,
+    has_financial_data,
+)
 from app.core.constants import COLLECTIONS
 from app.ml.forecast import generate_forecast
 from app.utils.dates import utcnow
@@ -34,6 +38,22 @@ async def analyze_risk(
     db: AsyncIOMotorDatabase, business_id: Any, now: Optional[datetime] = None,
 ) -> dict:
     now = now or utcnow()
+
+    # A brand-new account has no financial data yet — report a neutral zero
+    # state rather than a misleading "low risk" score of 100.
+    if not await has_financial_data(db, business_id):
+        return {
+            "risk_score": 0.0,
+            "risk_level": "no_data",
+            "risks": [],
+            "summary": {
+                "active_risks": 0,
+                "high_or_critical": 0,
+                "health_score": 0,
+            },
+            "generated_at": now,
+        }
+
     metrics = await compute_financial_metrics(db, business_id, now)
     monthly = await compute_monthly_series(db, business_id, months=6, now=now)
     health = await compute_health_score(db, business_id, now)
