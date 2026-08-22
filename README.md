@@ -15,7 +15,7 @@ A professional, production-ready fintech frontend application built with React, 
 - **Cash Flow Analysis**: Historical and forecasted cash flow visualization
 - **Risk Analysis**: Identify and monitor financial risks
 - **Loan Readiness**: Assess readiness for business financing
-- **AI CFO Assistant**: Grounded financial chat with optional AWS Bedrock explanations and a deterministic fallback
+- **AI CFO Assistant**: Grounded financial chat with optional OpenAI or Google Gemini explanations and a deterministic fallback
 - **Recommendations**: Complete, actionable financial summary shared between Dashboard and Recommendations
 - **Alerts & Notifications**: Real-time financial alerts
 - **Reports**: Generate comprehensive financial reports
@@ -134,36 +134,38 @@ cp .env.example .env
 VITE_API_BASE_URL=http://localhost:8000
 ```
 
-### Enable AWS Bedrock-powered explanations (optional)
+### Enable OpenAI or Google Gemini explanations (optional)
 
-The frontend never needs an AI-provider key. Configure Amazon Bedrock in the
-backend instead:
+The frontend never needs an AI-provider key. Configure the provider only in the
+backend:
 
 ```bash
 cd backend
 cp .env.example .env
 ```
 
+Choose OpenAI:
+
 ```env
-# backend/.env
-AWS_ACCESS_KEY_ID=your_access_key_id
-AWS_SECRET_ACCESS_KEY=your_secret_access_key
-AWS_REGION=us-east-1
-BEDROCK_MODEL_ID=anthropic.claude-sonnet-4-20250514-v1:0
-BEDROCK_TIMEOUT_SECONDS=90
-BEDROCK_MAX_RETRIES=2
+LLM_PROVIDER=openai
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-4.1-mini
 ```
 
-You need an AWS account, model access enabled in the Bedrock console, and an
-IAM access key — the full step-by-step walkthrough (including the
-least-privilege IAM policy, model ID options, and troubleshooting) is in
-[AWS_BEDROCK_SETUP.md](AWS_BEDROCK_SETUP.md). Then restart the FastAPI
-service. Bedrock is used only for grounded explanations, summaries, insights
-and AI CFO chat responses. Financial calculations and recommendation rules
-remain deterministic; if credentials are omitted or Bedrock is unavailable,
-the app automatically uses its deterministic explanation fallback. The AI CFO
-chat supports file understanding, but image generation is intentionally not
-included.
+Or Google Gemini:
+
+```env
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+See [AI_PROVIDER_SETUP.md](AI_PROVIDER_SETUP.md) for complete setup, provider
+selection, security notes, and troubleshooting. Then restart FastAPI. The
+provider is used only for grounded explanations, summaries, insights, chat, and
+image understanding. Financial calculations and recommendation rules remain
+deterministic; when no key is configured or a provider fails, the app
+transparently uses its deterministic fallback. Image generation is not exposed.
 
 ## Development
 

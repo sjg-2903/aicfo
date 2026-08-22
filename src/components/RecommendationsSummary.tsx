@@ -125,7 +125,11 @@ export default function RecommendationsSummary({ embedded = false }: Recommendat
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-1 text-xs text-slate-500">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 font-medium text-blue-700">
                 <Sparkles className="h-3.5 w-3.5" />
-                {summary.engine === 'bedrock' ? 'AI insights (AWS Bedrock)' : 'Trusted analysis engine'}
+                {summary.engine === 'openai'
+                  ? 'AI insights (OpenAI)'
+                  : summary.engine === 'gemini'
+                    ? 'AI insights (Google Gemini)'
+                    : 'Trusted analysis engine'}
               </span>
               {summary.generatedAt && (
                 <span className="text-slate-400">

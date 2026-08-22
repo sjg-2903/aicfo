@@ -87,9 +87,9 @@ The AI CFO & Financial Advisor frontend is a modern, responsive React applicatio
 │  ┌────────────────────────────────────────────────────────┐  │
 │  │         AI/ML Integration                              │  │
 │  ├────────────────────────────────────────────────────────┤  │
-│  │• Amazon Bedrock Integration                            │  │
+│  │• OpenAI / Google Gemini Integration                    │  │
 │  │• AI CFO Agent                                          │  │
-│  │• Bedrock Knowledge Bases                               │  │
+│  │• Grounded AI CFO Narratives                            │  │
 │  │• Recommendation Engine                                 │  │
 │  └────────────────────────────────────────────────────────┘  │
 │                                                                │
@@ -203,7 +203,7 @@ src/
 | Pydantic | Data validation |
 | JWT | Authentication |
 | MongoDB | NoSQL database |
-| Amazon Bedrock | AI/ML services |
+| OpenAI / Google Gemini | Optional AI narrative services |
 | AWS S3 | File storage |
 | AWS Lambda | Serverless functions |
 

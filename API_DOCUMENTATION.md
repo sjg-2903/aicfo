@@ -1394,12 +1394,12 @@ Get detailed readiness factors.
 ## AI CFO Endpoints
 
 The AI CFO is grounded in the authenticated business's calculated financial
-context. AWS Bedrock is optional and is used only for explanations, summaries,
-insights, and chat responses; the backend falls back to deterministic output if
-no Bedrock credentials are configured or a Bedrock request fails. Financial
-calculations, forecasting, risk scores, and recommendation rules are never
-delegated to Bedrock. See [AWS_BEDROCK_SETUP.md](AWS_BEDROCK_SETUP.md) for
-configuration.
+context. OpenAI and Google Gemini are optional narrative providers used only for
+explanations, summaries, insights, chat, and image understanding. The backend
+falls back to deterministic output when no provider key is configured or a
+request fails. Financial calculations, forecasts, risk scores, and deterministic
+recommendation rules are never delegated to a provider. See
+[AI_PROVIDER_SETUP.md](AI_PROVIDER_SETUP.md) for configuration.
 
 ### POST /api/ai-cfo/chat
 
@@ -1421,7 +1421,7 @@ Send a text message to the AI CFO assistant.
   "success": true,
   "data": {
     "session_id": "…",
-    "engine": "bedrock | deterministic",
+    "engine": "openai | gemini | deterministic",
     "message": {
       "role": "assistant",
       "content": "## Financial snapshot\n\n| Metric | Current period |…",
@@ -1445,7 +1445,7 @@ rendering arbitrary HTML.
 Send a chat message with one `multipart/form-data` attachment. The fields are
 `message`, optional `session_id`, and `file` (up to 15 MB). The attachment is
 reviewed only within chat and is not imported into business ledgers. Image
-attachments can be understood when the selected Bedrock model supports vision;
+attachments can be understood when the selected OpenAI or Gemini model supports image input;
 the API never generates images.
 
 The response has the same shape as `/chat` plus safe attachment metadata:
@@ -1479,8 +1479,8 @@ There is intentionally no image-generation endpoint in the AI CFO API.
 
 Return the complete financial-summary bullet list used by both Dashboard and the
 Recommendations page. This is the single shared recommendation-summary source;
-deterministic rules generate the underlying findings and Bedrock may only improve
-natural-language insights when configured.
+deterministic rules generate the underlying findings and the configured provider may only
+improve natural-language insights when configured.
 
 ### GET /api/recommendations
 Get recommendations with pagination and filtering.
@@ -1961,8 +1961,8 @@ Base: `POST /api/uploads/*`
 
 Multipart upload (`file`). Extracts candidate rows locally from a PDF text layer or,
 for an image, optional Tesseract OCR followed by deterministic heuristics. It falls
-back to manual review when no safe text can be recovered. Bedrock is reserved for
-explanations, summaries, insights, and AI CFO chat responses. **Nothing is stored in
+back to manual review when no safe text can be recovered. External AI providers are
+reserved for explanations, summaries, insights, and AI CFO chat responses. **Nothing is stored in
 the database** — the caller must show the rows to the user for review.
 
 ```json
@@ -2067,8 +2067,8 @@ other businesses, 401 unauthenticated).
 Returns the complete financial-summary bullet list used by both the Dashboard
 and the Recommendations page. The shared frontend component and this single
 endpoint prevent separate dashboard recommendation logic. Recommendation rules
-are deterministic; Bedrock may improve the natural-language insight summary when
-configured, with a deterministic fallback on any provider failure.
+are deterministic; the configured provider may improve the natural-language insight
+summary, with a deterministic fallback on any provider failure.
 
 
 ## Changelog

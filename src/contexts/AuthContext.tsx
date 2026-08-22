@@ -5,8 +5,8 @@ import apiClient from '@/lib/axios';
 /**
  * Authentication context — backed by the FastAPI backend.
  *
- * No silent fallback: login/register errors are surfaced to the UI, and the
- * "Explore Demo" flow logs in with a real demo account (seeded server-side).
+ * No silent fallback: login and registration errors are surfaced to the UI.
+ * Every interactive entry point requires user-supplied credentials.
  */
 
 export interface UserProfile extends AuthUser {
@@ -19,13 +19,9 @@ export interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, business_name: string, owner_name: string) => Promise<void>;
-  loginAsDemo: () => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
-
-export const DEMO_EMAIL = 'owner@acmeindustries.com';
-export const DEMO_PASSWORD = 'demo12345';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -91,11 +87,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(enriched);
   };
 
-  const loginAsDemo = async () => {
-    // Real login against the demo account seeded by the backend.
-    await login(DEMO_EMAIL, DEMO_PASSWORD);
-  };
-
   const logout = async () => {
     try {
       await authService.logout();
@@ -126,7 +117,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         login,
         register,
-        loginAsDemo,
         logout,
         refreshUser,
       }}

@@ -7,7 +7,7 @@ documents with local, review-first methods:
 2. **Tesseract OCR** (optional system binary) + the same heuristics for images.
 3. **Manual review** when no safe text can be recovered.
 
-Bedrock is intentionally not used for imports: it is reserved for explanations,
+External AI providers are intentionally not used for imports: they are reserved for explanations,
 summaries, insights, and AI CFO chat responses. Nothing is inserted into the
 database here; the caller shows candidate rows in an editable review form and
 only the explicit *confirm* endpoint stores anything.

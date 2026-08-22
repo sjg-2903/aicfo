@@ -1,8 +1,8 @@
 """AI CFO agent — chat, analysis and recommendations.
 
-All numbers come from deterministic analytics engines. AWS Bedrock is used only
-to explain those trusted calculations, summarize insights, and answer chat
-questions; without Bedrock credentials the agent produces deterministic
+All numbers come from deterministic analytics engines. OpenAI or Google Gemini is
+used only to explain those trusted calculations, summarize insights, and answer
+chat questions; without a provider API key the agent produces deterministic
 explanations from the same context.
 """
 
@@ -83,7 +83,7 @@ async def build_context(db: AsyncIOMotorDatabase, business_id: Any) -> dict:
 
 
 def _deterministic_answer(question: str, ctx: dict) -> str:
-    """Format trusted engine output as readable Markdown when Bedrock is unavailable."""
+    """Format trusted engine output as readable Markdown when no AI provider is available."""
     q = question.lower()
     m = ctx["metrics"]
     h = ctx["health"]
@@ -234,7 +234,7 @@ def _deterministic_attachment_answer(question: str, ctx: dict, attachment: dict)
     business_answer = _deterministic_answer(question, ctx)
     return (
         f"{file_section}\n\n---\n\n## Business-data context\n\n{business_answer}\n\n"
-        "Configure **AWS Bedrock credentials** (see AWS_BEDROCK_SETUP.md) to enable "
+        "Configure an **OpenAI or Gemini API key** (see AI_PROVIDER_SETUP.md) to enable "
         "AI-powered reasoning across this attachment."
     )
 

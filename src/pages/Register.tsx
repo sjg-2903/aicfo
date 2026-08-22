@@ -1,13 +1,13 @@
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
-import { Mail, Lock, User, Building2, Eye, EyeOff, Brain, Sparkles } from 'lucide-react';
+import { Mail, Lock, User, Building2, Eye, EyeOff, Brain } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { getErrorMessage } from '@/lib/axios';
 
 export default function Register() {
   const navigate = useNavigate();
-  const { register, loginAsDemo } = useAuth();
+  const { register } = useAuth();
   const { addToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -17,15 +17,6 @@ export default function Register() {
     business_name: '',
     owner_name: '',
   });
-
-  const handleDemo = async () => {
-    try {
-      await loginAsDemo();
-      navigate('/dashboard');
-    } catch (error) {
-      addToast(getErrorMessage(error, 'Demo login failed'), 'error');
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,22 +120,6 @@ export default function Register() {
               {loading ? 'Creating account...' : 'Sign Up'}
             </button>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-slate-600" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-slate-800 px-3 text-slate-400">or</span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleDemo}
-              className="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded-lg transition flex items-center justify-center gap-2 border border-slate-500"
-            >
-              <Sparkles className="w-4 h-4" /> Explore Demo
-            </button>
           </form>
 
           <p className="text-center text-slate-400 mt-6">

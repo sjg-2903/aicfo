@@ -1,10 +1,10 @@
-"""Recommendation service — deterministic rules with optional Bedrock narratives.
+"""Recommendation service — deterministic rules with optional AI narratives.
 
-Bedrock never receives a vague request by itself. We send a user instruction, a
+The configured provider never receives a vague request by itself. We send a user instruction, a
 calculated analysis spanning every finance section, and the exact schema used by
 the Recommendations screen. Its output is validated and normalised before it
 can be persisted. The trusted deterministic engine remains the fallback when
-Bedrock is unavailable or returns unusable JSON.
+the provider is unavailable or returns unusable JSON.
 """
 
 import hashlib

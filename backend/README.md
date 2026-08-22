@@ -20,7 +20,7 @@ frontend through real REST APIs — no mock endpoints, no dummy calculations.
 9. [Response conventions](#response-conventions)
 10. [CSV imports](#csv-imports)
 11. [Financial engines](#financial-engines)
-12. [AI CFO & AWS Bedrock](#ai-cfo--aws-bedrock)
+12. [AI CFO & AI providers](#ai-cfo--ai-providers)
 13. [Demo mode & demo data](#demo-mode--demo-data)
 14. [Testing](#testing)
 15. [Frontend integration notes](#frontend-integration-notes)
@@ -158,14 +158,15 @@ automatically at startup (`app/db/indexes.py`).
 | `JWT_ALGORITHM` | JWT algorithm | `HS256` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Access token TTL | `30` |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | Refresh token TTL | `7` |
-| `AWS_ACCESS_KEY_ID` | IAM access key ID for optional Bedrock narratives | *(empty)* |
-| `AWS_SECRET_ACCESS_KEY` | IAM secret access key (leave empty to use an IAM role / `AWS_PROFILE`) | *(empty)* |
-| `AWS_SESSION_TOKEN` | Session token for temporary credentials (SSO / assumed roles) | *(empty)* |
-| `AWS_PROFILE` | Named profile from `~/.aws/credentials` | *(empty)* |
-| `AWS_REGION` | Bedrock region (enable models there first) | `us-east-1` |
-| `BEDROCK_MODEL_ID` | Bedrock model identifier | `anthropic.claude-sonnet-4-20250514-v1:0` |
-| `BEDROCK_TIMEOUT_SECONDS` | Bounded timeout for one Bedrock request | `90` |
-| `BEDROCK_MAX_RETRIES` | Retries for transient Bedrock failures (0–5) | `2` |
+| `LLM_PROVIDER` | `auto`, `openai`, or `gemini` | `auto` |
+| `OPENAI_API_KEY` | Backend-only OpenAI API key | *(empty)* |
+| `OPENAI_MODEL` | OpenAI chat/vision model | `gpt-4.1-mini` |
+| `OPENAI_BASE_URL` | OpenAI API base URL | `https://api.openai.com/v1` |
+| `GEMINI_API_KEY` | Backend-only Google Gemini API key | *(empty)* |
+| `GEMINI_MODEL` | Gemini chat/vision model | `gemini-2.5-flash` |
+| `GEMINI_BASE_URL` | Gemini API base URL | Google Generative Language v1beta |
+| `LLM_TIMEOUT_SECONDS` | Bounded timeout for one provider request | `90` |
+| `LLM_MAX_RETRIES` | Retries for transient provider failures (0–5) | `2` |
 | `ENVIRONMENT` | `development` / `production` | `development` |
 | `CORS_ORIGINS` | Comma-separated allowed origins | `http://localhost:5173,...` |
 | `ADMIN_EMAILS` | Emails granted the `ADMIN` role | *(empty)* |
@@ -283,50 +284,41 @@ LLM.
 
 ---
 
-## AI CFO & AWS Bedrock
+## AI CFO & AI providers
 
 `POST /api/ai-cfo/chat` stores the local conversation (`chat_sessions`,
-`chat_messages`) and answers using real context gathered from the financial
-engines.
+`chat_messages`) and answers from real context gathered by the financial
+engines. OpenAI and Google Gemini are supported as optional narrative providers.
 
-### Configure AWS Bedrock
+### Configure OpenAI or Gemini
 
-Full walkthrough (AWS account, enabling model access, creating an IAM access
-key, model ID options, troubleshooting): see
-[AWS_BEDROCK_SETUP.md](../AWS_BEDROCK_SETUP.md).
-
-1. Enable a model (e.g. Claude Sonnet 4) in the Amazon Bedrock console →
-   **Model access**, in the region you will use.
-2. Create an IAM user with an inline policy granting
-   `bedrock:InvokeModel` / `bedrock:InvokeModelWithResponseStream`, and an
-   access key for it.
-3. Copy `backend/.env.example` to `backend/.env` and set the credentials:
+See [AI_PROVIDER_SETUP.md](../AI_PROVIDER_SETUP.md) for provider keys, model
+selection, security guidance, Docker setup, verification, and troubleshooting.
+A minimal OpenAI configuration is:
 
 ```env
-AWS_ACCESS_KEY_ID=your_access_key_id
-AWS_SECRET_ACCESS_KEY=your_secret_access_key
-AWS_REGION=us-east-1
-BEDROCK_MODEL_ID=anthropic.claude-sonnet-4-20250514-v1:0
-BEDROCK_TIMEOUT_SECONDS=90
-BEDROCK_MAX_RETRIES=2
+LLM_PROVIDER=openai
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-4.1-mini
 ```
 
-4. Restart the API. The frontend never receives these credentials; all
-   Bedrock calls happen server-side.
+A minimal Gemini configuration is:
 
-The client uses the Bedrock **Converse API** via boto3 (run in a worker thread
-so the async event loop is never blocked). Credentials resolve through
-boto3's standard chain — explicit `.env` keys, a named `AWS_PROFILE`, or an
-attached IAM role on EC2/ECS. Bedrock is used only for explanations,
-summaries, insights, and AI CFO chat responses. Financial metrics, forecasts,
-scores, and recommendation rules remain deterministic Python calculations.
-If credentials are absent, Bedrock is unavailable, or it returns an unusable
-response, the API automatically returns a deterministic explanation from the
-same trusted data instead of failing the user workflow.
+```env
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash
+```
 
-Image generation is not part of the AI CFO API. Image attachments remain
-available only for understanding an image within a chat request when the chosen
-Bedrock model supports vision.
+Restart the API after changing configuration. Calls happen server-side and API
+keys are never returned to the frontend. Providers are used only for
+explanations, summaries, insights, chat, and attachment understanding.
+Financial metrics, forecasts, scores, and recommendation rules remain trusted
+Python calculations. Missing keys, timeouts, rate limits, malformed responses,
+and other provider failures automatically use deterministic output.
+
+Image generation is not part of the AI CFO API. Image attachments are available
+only for understanding an image when the selected model supports image input.
 
 ---
 
