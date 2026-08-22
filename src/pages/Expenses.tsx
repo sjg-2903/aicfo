@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Upload } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Card, PageHeader, ChartCard, ErrorState } from '@/components/ui';
+import SegmentStepsGuide from '@/components/SegmentStepsGuide';
 import { EntityFormModal, type FieldDef, type FormValues } from '@/components/EntityFormModal';
 import { RowActions } from '@/components/RowActions';
 import UploadWizard from '@/components/UploadWizard';
@@ -138,6 +139,9 @@ export default function Expenses() {
           </>
         }
       />
+
+      {/* Segment Steps Guide */}
+      <SegmentStepsGuide segment="expenses" defaultExpanded={false} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="p-5 hover">

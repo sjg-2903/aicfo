@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, PageHeader, Pill, ProgressBar, ScoreRing, ErrorState } from '@/components/ui';
+import SegmentStepsGuide from '@/components/SegmentStepsGuide';
 import { getErrorMessage } from '@/lib/axios';
 import loanReadinessService from '@/services/loanReadinessService';
 
@@ -18,6 +19,9 @@ export default function LoanReadiness() {
   return (
     <div className="space-y-6">
       <PageHeader title="Loan Readiness" subtitle="Assess your eligibility for business financing" />
+
+      {/* Segment Steps Guide */}
+      <SegmentStepsGuide segment="loan-readiness" defaultExpanded={false} />
 
       {error ? (
         <Card>

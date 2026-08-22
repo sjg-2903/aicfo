@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Building2, Save } from 'lucide-react';
 import { Card, PageHeader, ErrorState } from '@/components/ui';
+import SegmentStepsGuide from '@/components/SegmentStepsGuide';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
 import { getErrorMessage } from '@/lib/axios';
@@ -89,6 +90,9 @@ export default function Profile() {
   return (
     <div className="space-y-6 max-w-3xl">
       <PageHeader title="Business Profile" subtitle="Manage your business information" />
+
+      {/* Segment Steps Guide */}
+      <SegmentStepsGuide segment="profile" defaultExpanded={false} />
 
       {error ? (
         <Card>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Banknote, CalendarClock, CheckCircle2, Plus, Upload } from 'lucide-react';
 import { Card, PageHeader, Pill, ProgressBar, ErrorState } from '@/components/ui';
+import SegmentStepsGuide from '@/components/SegmentStepsGuide';
 import { useToast } from '@/components/Toast';
 import UploadWizard from '@/components/UploadWizard';
 import { DataTable, type Column } from '@/components/DataTable';
@@ -135,6 +136,9 @@ export default function Loans() {
           </>
         }
       />
+
+      {/* Segment Steps Guide */}
+      <SegmentStepsGuide segment="loans" defaultExpanded={false} />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="p-5 hover">

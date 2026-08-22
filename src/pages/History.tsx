@@ -14,6 +14,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Card, PageHeader, Pill, ErrorState, EmptyState } from '@/components/ui';
+import SegmentStepsGuide from '@/components/SegmentStepsGuide';
 import { Pagination } from '@/components/DataTable';
 import { useToast } from '@/components/Toast';
 import { getErrorMessage } from '@/lib/axios';
@@ -117,6 +118,9 @@ export default function History() {
   return (
     <div className="space-y-6">
       <PageHeader title="History" subtitle="A complete timeline of uploads, imports, reports and financial-data operations" />
+
+      {/* Segment Steps Guide */}
+      <SegmentStepsGuide segment="history" defaultExpanded={false} />
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">

@@ -33,18 +33,19 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # ── AI narrative provider (optional) ──────────────────────────────────
-    # OpenAI or Google Gemini is used only to explain / summarize trusted
-    # backend output and answer chat requests. Financial calculations,
-    # forecasts, risk scores and deterministic recommendation rules stay in
-    # Python. With no configured API key, callers use deterministic output.
+    # Google Gemini or OpenAI is used to explain / summarize trusted backend
+    # output and answer chat requests. Financial calculations, forecasts,
+    # risk scores and deterministic recommendation rules stay in Python.
+    # Gemini is the primary default provider, with OpenAI as secondary failover.
+    # With no configured API key, callers use deterministic output.
     # See AI_PROVIDER_SETUP.md for setup and data-handling guidance.
-    LLM_PROVIDER: str = "auto"  # auto (OpenAI first), openai, or gemini
-    OPENAI_API_KEY: Optional[str] = None
-    OPENAI_MODEL: str = "gpt-4.1-mini"
-    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
+    LLM_PROVIDER: str = "auto"  # auto (Gemini first, then OpenAI), gemini, or openai
     GEMINI_API_KEY: Optional[str] = None
     GEMINI_MODEL: str = "gemini-2.5-flash"
     GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta"
+    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_MODEL: str = "gpt-4.1-mini"
+    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
     LLM_TIMEOUT_SECONDS: float = Field(default=90.0, ge=5.0, le=3600.0)
     LLM_MAX_RETRIES: int = Field(default=2, ge=0, le=5)
 

@@ -17,6 +17,7 @@ import { ChatMarkdown } from '@/components/ChatMarkdown';
 import { useToast } from '@/components/Toast';
 import { getErrorMessage } from '@/lib/axios';
 import aiCfoService from '@/services/aiCfoService';
+import SegmentStepsGuide from '@/components/SegmentStepsGuide';
 
 interface MessageAttachment {
   name: string;
@@ -70,8 +71,8 @@ const formatFileSize = (bytes: number) => {
 };
 
 const engineLabel = (engine?: string) => {
-  if (engine === 'openai') return 'AI CFO (OpenAI)';
   if (engine === 'gemini') return 'AI CFO (Google Gemini)';
+  if (engine === 'openai') return 'AI CFO (OpenAI)';
   return 'AI CFO';
 };
 
@@ -224,6 +225,9 @@ export default function AICFO() {
           <RotateCcw className="h-4 w-4" /> <span>New chat</span>
         </button>
       </div>
+
+      {/* Segment Steps Guide */}
+      <SegmentStepsGuide segment="ai-cfo" defaultExpanded={false} />
 
       <Card className="relative flex min-h-[520px] flex-1 flex-col overflow-hidden border-slate-200/90 dark:border-slate-800 shadow-sm">
         <div
