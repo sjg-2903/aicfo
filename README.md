@@ -161,11 +161,13 @@ GEMINI_MODEL=gemini-2.5-flash
 ```
 
 See [AI_PROVIDER_SETUP.md](AI_PROVIDER_SETUP.md) for complete setup, provider
-selection, security notes, and troubleshooting. Then restart FastAPI. The
-provider is used only for grounded explanations, summaries, insights, chat, and
-image understanding. Financial calculations and recommendation rules remain
-deterministic; when no key is configured or a provider fails, the app
-transparently uses its deterministic fallback. Image generation is not exposed.
+selection, security notes, and troubleshooting. Then restart FastAPI. AI output
+is always given priority: OpenAI is tried first, then Gemini as a failover, and
+deterministic calculations/rules are used only when no key is configured or
+every provider attempt fails. Responses expose an `engine` field
+(`openai | gemini | deterministic`) so the UI can show which engine produced
+chat answers, analysis narratives, recommendations, and summary bullets.
+Image generation is not exposed.
 
 ## Development
 

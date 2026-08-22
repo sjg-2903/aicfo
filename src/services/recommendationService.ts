@@ -23,6 +23,7 @@ export interface SummaryBullets {
 
 export interface GenerateResult {
   recommendations: RecommendationRow[];
+  engine: string;
   summaryBullets: string[];
   summaryEngine: string;
 }
@@ -38,6 +39,7 @@ class RecommendationService {
     const response = await apiClient.post('/api/recommendations/generate', { prompt });
     const d = response.data as {
       recommendations?: unknown[];
+      engine?: string;
       summary_bullets?: string[];
       summary_engine?: string;
     };
@@ -50,6 +52,7 @@ class RecommendationService {
         : [];
     return {
       recommendations: rows.map((r) => mapRecommendation(r as Parameters<typeof mapRecommendation>[0])),
+      engine: d?.engine || 'deterministic',
       summaryBullets: Array.isArray(d?.summary_bullets) ? d.summary_bullets : [],
       summaryEngine: d?.summary_engine || 'deterministic',
     };

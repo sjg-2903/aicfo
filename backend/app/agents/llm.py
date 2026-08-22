@@ -28,32 +28,49 @@ logger = logging.getLogger(__name__)
 
 _IMAGE_FORMATS = {"png", "jpeg", "gif", "webp"}
 _RETRYABLE_STATUS_CODES = {408, 409, 429}
-_SUPPORTED_PROVIDERS = {"openai", "gemini"}
+# Fixed AI-first priority: OpenAI, then Gemini, then deterministic output.
+_PROVIDER_PRIORITY = ("openai", "gemini")
+
+
+def _provider_configured(provider: str) -> bool:
+    """A provider is usable only when both its API key and model are present."""
+    if provider == "openai":
+        return bool((settings.OPENAI_API_KEY or "").strip() and (settings.OPENAI_MODEL or "").strip())
+    if provider == "gemini":
+        return bool((settings.GEMINI_API_KEY or "").strip() and (settings.GEMINI_MODEL or "").strip())
+    return False
+
+
+def configured_providers() -> list[str]:
+    """Return every configured provider, in priority (failover) order.
+
+    ``LLM_PROVIDER=auto`` (the default) tries OpenAI first, then Gemini.
+    Setting it explicitly to ``openai`` or ``gemini`` moves that provider to
+    the front, but the other configured provider is still tried as failover
+    before the deterministic fallback. This keeps AI-first behaviour: both
+    providers are attempted, and deterministic output is used only when every
+    configured provider is unavailable or returns no usable text.
+    """
+    requested = (settings.LLM_PROVIDER or "auto").strip().lower()
+    ordered = list(_PROVIDER_PRIORITY)
+    if requested in _PROVIDER_PRIORITY:
+        ordered = [requested] + [provider for provider in ordered if provider != requested]
+    return [provider for provider in ordered if _provider_configured(provider)]
 
 
 def active_provider() -> Optional[str]:
-    """Return the configured provider when its API key and model are present.
+    """Return the preferred configured provider (first in failover order).
 
-    ``LLM_PROVIDER=auto`` selects OpenAI first when both keys are present, then
-    Gemini. Set the variable explicitly to ``openai`` or ``gemini`` to require
-    one provider.
+    With ``LLM_PROVIDER=auto`` this is OpenAI when its key is present, else
+    Gemini. Explicit ``openai`` or ``gemini`` moves that provider first.
     """
-    requested = (settings.LLM_PROVIDER or "auto").strip().lower()
-    candidates = ["openai", "gemini"] if requested in {"", "auto"} else [requested]
-
-    for provider in candidates:
-        if provider == "openai":
-            if (settings.OPENAI_API_KEY or "").strip() and (settings.OPENAI_MODEL or "").strip():
-                return provider
-        elif provider == "gemini":
-            if (settings.GEMINI_API_KEY or "").strip() and (settings.GEMINI_MODEL or "").strip():
-                return provider
-    return None
+    providers = configured_providers()
+    return providers[0] if providers else None
 
 
 def is_available() -> bool:
-    """Whether an OpenAI or Gemini narrative provider is configured."""
-    return active_provider() is not None
+    """Whether at least one OpenAI or Gemini narrative provider is configured."""
+    return bool(configured_providers())
 
 
 def _image_format(mime_type: str) -> str:
@@ -260,7 +277,7 @@ async def _post_response(
     *,
     timeout_seconds: Optional[float] = None,
 ) -> Optional[str]:
-    """Send a provider request and signal deterministic fallback with ``None``."""
+    """Send one provider request; ``None`` signals fall-through to the next provider / deterministic output."""
     timeout = float(timeout_seconds or settings.LLM_TIMEOUT_SECONDS)
     attempts = int(settings.LLM_MAX_RETRIES) + 1
 
@@ -272,7 +289,7 @@ async def _post_response(
             )
             text = _response_text(provider, body)
             if not text:
-                logger.warning("%s returned no output text; using deterministic fallback", provider.title())
+                logger.warning("%s returned no output text; trying the next provider", provider.title())
             return text
         except Exception as exc:  # provider failures must never break finance workflows
             retryable = _is_retryable(exc)
@@ -282,12 +299,63 @@ async def _post_response(
             status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
             reason = f"HTTP {status}" if status else exc.__class__.__name__
             logger.warning(
-                "%s request failed (%s); using deterministic fallback",
+                "%s request failed (%s); trying the next provider or deterministic fallback",
                 provider.title(),
                 reason,
             )
             return None
     return None
+
+
+async def _complete_with_failover(
+    system: str,
+    user: str,
+    *,
+    max_tokens: int,
+    temperature: float,
+    image_bytes: Optional[bytes] = None,
+    mime_type: str = "image/png",
+    timeout_seconds: Optional[float] = None,
+) -> tuple[Optional[str], Optional[str]]:
+    """Ask every configured provider in priority order; return ``(text, provider)``.
+
+    OpenAI is attempted before Gemini (unless ``LLM_PROVIDER`` explicitly moves
+    Gemini first). The first provider that returns usable text wins. When no
+    provider is configured or every attempt fails, ``(None, None)`` is returned
+    so callers can supply their deterministic fallback.
+    """
+    providers = configured_providers()
+    if not providers:
+        return None, None
+    for provider in providers:
+        payload = _build_payload(
+            provider,
+            system,
+            user,
+            max_tokens,
+            temperature,
+            image_bytes=image_bytes,
+            mime_type=mime_type,
+        )
+        text = await _post_response(payload, provider, timeout_seconds=timeout_seconds)
+        if text:
+            logger.info("%s produced a grounded response", provider.title())
+            return text, provider
+        logger.warning("%s did not produce a usable response; trying the next provider", provider.title())
+    return None, None
+
+
+async def complete_engine(
+    system: str,
+    user: str,
+    *,
+    max_tokens: int = 1024,
+    temperature: float = 0.2,
+) -> tuple[Optional[str], Optional[str]]:
+    """Ask providers in priority order and return ``(text, provider)``."""
+    return await _complete_with_failover(
+        system, user, max_tokens=max_tokens, temperature=temperature
+    )
 
 
 async def complete(
@@ -297,12 +365,33 @@ async def complete(
     max_tokens: int = 1024,
     temperature: float = 0.2,
 ) -> Optional[str]:
-    """Ask the configured provider for text, or return ``None`` on fallback."""
-    provider = active_provider()
-    if provider not in _SUPPORTED_PROVIDERS:
-        return None
-    payload = _build_payload(provider, system, user, max_tokens, temperature)
-    return await _post_response(payload, provider)
+    """Ask the configured providers for text, or return ``None`` on fallback.
+
+    Convenience wrapper around :func:`complete_engine` for callers that only
+    need the text.
+    """
+    text, _ = await complete_engine(
+        system, user, max_tokens=max_tokens, temperature=temperature
+    )
+    return text
+
+
+async def complete_vision_engine(
+    system: str,
+    prompt: str,
+    image_bytes: bytes,
+    mime_type: str = "image/png",
+) -> tuple[Optional[str], Optional[str]]:
+    """Ask the configured providers to understand an image; return ``(text, provider)``."""
+    return await _complete_with_failover(
+        system,
+        prompt,
+        max_tokens=2048,
+        temperature=0.1,
+        image_bytes=image_bytes,
+        mime_type=mime_type,
+        timeout_seconds=max(float(settings.LLM_TIMEOUT_SECONDS), 120.0),
+    )
 
 
 async def complete_vision(
@@ -311,21 +400,8 @@ async def complete_vision(
     image_bytes: bytes,
     mime_type: str = "image/png",
 ) -> Optional[str]:
-    """Ask the configured provider to understand an attached image."""
-    provider = active_provider()
-    if provider not in _SUPPORTED_PROVIDERS:
-        return None
-    payload = _build_payload(
-        provider,
-        system,
-        prompt,
-        max_tokens=2048,
-        temperature=0.1,
-        image_bytes=image_bytes,
-        mime_type=mime_type,
+    """Ask the configured providers to understand an image, or return ``None`` on fallback."""
+    text, _ = await complete_vision_engine(
+        system, prompt, image_bytes, mime_type=mime_type
     )
-    return await _post_response(
-        payload,
-        provider,
-        timeout_seconds=max(float(settings.LLM_TIMEOUT_SECONDS), 120.0),
-    )
+    return text
