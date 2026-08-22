@@ -1,0 +1,44 @@
+# ─────────────────────────────────────────────────────────────────────────
+# AI CFO — production site (static SPA + API reverse proxy) for Caddy.
+#
+# DOMAIN is injected from the container environment:
+#   DOMAIN unset/empty -> site serves plain HTTP on :80 (reachable via the
+#                         server's public IP, e.g. http://<eip>)
+#   DOMAIN=app.example.com -> automatic HTTPS with a Let's Encrypt
+#                             certificate (ports 80/443)
+# ─────────────────────────────────────────────────────────────────────────
+
+{
+	# Localhost admin endpoint (used by the container health check).
+	admin localhost:2019
+}
+
+{$DOMAIN::80} {
+	encode gzip zstd
+
+	# Basic hardening headers.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	# API and health checks -> FastAPI backend (same-origin, no CORS needed).
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+	handle /health {
+		reverse_proxy backend:8000
+	}
+
+	# Single-page app: serve the Vite build and fall back to index.html for
+	# client-side routes (React Router).
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

@@ -13,7 +13,6 @@ import {
   Receipt,
   Landmark,
   Check,
-  Play,
   ChevronDown,
   ChevronUp,
   Calculator,
@@ -347,16 +346,6 @@ export default function Landing() {
                 >
                   <span>Explore Live Demo</span>
                   <ArrowRight className="w-5 h-5" />
-                </Link>
-              </motion.span>
-
-              <motion.span whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.98 }} className="w-full sm:w-auto">
-                <Link
-                  to="/dashboard"
-                  className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-4 bg-slate-900/90 hover:bg-slate-800 border border-slate-700/90 text-slate-200 rounded-2xl font-bold text-base transition backdrop-blur-md"
-                >
-                  <Play className="w-4 h-4 text-blue-400 fill-blue-400" />
-                  <span>Explore Live Demo</span>
                 </Link>
               </motion.span>
             </motion.div>

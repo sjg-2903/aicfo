@@ -1,0 +1,116 @@
+name: Deploy to AWS (EC2 + Docker Compose)
+
+# CI: verify frontend build and backend tests.
+# CD: on pushes to main, trigger a rebuild+redeploy on the EC2 host over SSM.
+#
+# Repository secrets (Settings → Secrets and variables → Actions):
+#   AWS_ACCESS_KEY_ID       (IAM user with ssm:SendCommand / GetCommandInvocation)
+#   AWS_SECRET_ACCESS_KEY
+#   AWS_REGION              (e.g. ap-south-1)
+#   EC2_INSTANCE_ID         (terraform output instance_id)
+#
+# The instance must be created by infra/terraform (bootstrap installs the
+# SSM agent and gives it AmazonSSMManagedInstanceCore).
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["docs/**", "**/*.md", "**/*.tf", "infra/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Frontend — install & build
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+
+      - name: Backend — tests (in-memory MongoDB)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - run: pip install -r backend/requirements-dev.txt
+      - run: pytest backend/tests -q
+
+  deploy:
+    name: Deploy to EC2 via SSM
+    needs: verify
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Run update script on the EC2 host
+        id: ssm
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --timeout-seconds 1800 \
+            --comment "AI CFO deploy via GitHub Actions" \
+            --parameters 'commands=["sudo -u ubuntu bash /home/ubuntu/aicfo/deploy/update.sh"]' \
+            --query "Command.CommandId" --output text)
+          echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for the deployment to finish
+        run: |
+          for i in $(seq 1 60); do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "${{ steps.ssm.outputs.command_id }}" \
+              --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
+              --query "Status" --output text)
+            echo "SSM status: $STATUS"
+            case "$STATUS" in
+              Success)  exit 0 ;;
+              Failed|Cancelled|TimedOut) exit 1 ;;
+            esac
+            sleep 15
+          done
+          echo "Deployment timed out waiting for SSM." >&2
+          exit 1
+
+      - name: Verify the deployed stack (over SSM)
+        run: |
+          VERIFY=$(aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --timeout-seconds 300 \
+            --comment "AI CFO health verification" \
+            --parameters 'commands=["sudo -u ubuntu bash /home/ubuntu/aicfo/deploy/healthcheck.sh"]' \
+            --query "Command.CommandId" --output text)
+
+          for i in $(seq 1 20); do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$VERIFY" \
+              --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
+              --query "Status" --output text)
+            if [ "$STATUS" = "Success" ]; then exit 0; fi
+            if [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ] || [ "$STATUS" = "TimedOut" ]; then
+              aws ssm get-command-invocation \
+                --command-id "$VERIFY" \
+                --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
+                --query "StandardOutputContent,StandardErrorContent" --output text || true
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "Verification timed out." >&2
+          exit 1
