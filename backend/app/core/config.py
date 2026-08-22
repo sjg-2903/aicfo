@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     # See AI_PROVIDER_SETUP.md for setup and data-handling guidance.
     LLM_PROVIDER: str = "auto"  # auto (Gemini first, then OpenAI), gemini, or openai
     GEMINI_API_KEY: Optional[str] = None
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-3.6-flash"
     GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta"
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL: str = "gpt-4.1-mini"

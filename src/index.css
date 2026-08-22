@@ -219,6 +219,23 @@ html.dark .recharts-cartesian-grid-vertical line {
   animation: pulseGlow 7s ease-in-out infinite;
 }
 
+/* Indeterminate progress bar for the branded LoadingPage */
+@keyframes loadingBarSlide {
+  0% {
+    transform: translateX(-110%) scaleX(0.7);
+  }
+  50% {
+    transform: translateX(140%) scaleX(1);
+  }
+  100% {
+    transform: translateX(320%) scaleX(0.7);
+  }
+}
+
+.loading-bar {
+  animation: loadingBarSlide 1.4s ease-in-out infinite;
+}
+
 /* Reduce motion support */
 @media (prefers-reduced-motion: reduce) {
   * {

@@ -157,7 +157,7 @@ Or Google Gemini:
 ```env
 LLM_PROVIDER=gemini
 GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.6-flash
 ```
 
 See [AI_PROVIDER_SETUP.md](AI_PROVIDER_SETUP.md) for complete setup, provider

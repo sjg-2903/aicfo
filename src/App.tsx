@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { LoadingSkeleton } from '@/components/LoadingSkeleton';
+import LoadingPage from '@/components/LoadingPage';
 import { useToast, ToastContainer } from '@/components/Toast';
 import AppLayout from '@/components/layout/AppLayout';
 
@@ -42,12 +42,8 @@ const queryClient = new QueryClient({
 });
 
 function PageLoader() {
-  return (
-    <div className="p-8 space-y-4">
-      <LoadingSkeleton height="h-8" count={2} />
-      <LoadingSkeleton height="h-40" count={2} />
-    </div>
-  );
+  // Branded full-screen loading page shown while lazy route chunks load.
+  return <LoadingPage message="Loading page" />;
 }
 
 const AppContent = () => {

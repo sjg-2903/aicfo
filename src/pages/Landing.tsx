@@ -541,7 +541,7 @@ export default function Landing() {
                       </div>
                       <div className="flex-1 space-y-1.5">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-white">AI CFO (Google Gemini 2.5 Flash)</span>
+                          <span className="font-bold text-white">AI CFO (Google Gemini 3.6 Flash)</span>
                           <span className="text-[10px] text-emerald-400 bg-emerald-950 px-1.5 py-0.5 rounded">Grounded in Live Data</span>
                         </div>
                         <p className="leading-relaxed">
@@ -1194,7 +1194,7 @@ export default function Landing() {
               },
               {
                 q: 'How does the AI model priority work?',
-                a: 'The system uses Google Gemini 2.5 Flash as its primary high-speed narrative model for instant conversational chat and multimodal invoice document analysis, with OpenAI GPT-4.1 Mini as an intelligent automated failover. If both are unreachable, deterministic financial engines provide 100% reliable fallback.',
+                a: 'The system uses Google Gemini 3.6 Flash as its primary high-speed narrative model for instant conversational chat and multimodal invoice document analysis, with OpenAI GPT-4.1 Mini as an intelligent automated failover. If both are unreachable, deterministic financial engines provide 100% reliable fallback.',
               },
               {
                 q: 'Can AI CFO help my business get approved for bank loans?',
@@ -1297,7 +1297,7 @@ export default function Landing() {
               {/* Live Status indicator */}
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-300">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>AI Engines Online: Google Gemini 2.5 &amp; OpenAI</span>
+                <span>AI Engines Online: Google Gemini 3.6 &amp; OpenAI</span>
               </div>
 
               {/* Newsletter subscribe form */}
