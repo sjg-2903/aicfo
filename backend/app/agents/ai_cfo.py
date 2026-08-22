@@ -16,6 +16,7 @@ from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.agents import llm
+from app.agents.deterministic_knowledge import get_deterministic_answer
 from app.analytics.financial_health import compute_health_score
 from app.analytics.metrics import compute_financial_metrics
 from app.core.constants import COLLECTIONS
@@ -84,147 +85,12 @@ async def build_context(db: AsyncIOMotorDatabase, business_id: Any) -> dict:
 
 
 def _deterministic_answer(question: str, ctx: dict) -> str:
-    """Format trusted engine output as readable Markdown when no AI provider is available."""
-    q = question.lower()
-    m = ctx["metrics"]
-    h = ctx["health"]
-    r = ctx["risk"]
-    lr = ctx["loan_readiness"]
-    f = ctx["forecast"]
+    """Format trusted financial engine output as readable Markdown when no AI provider is available."""
+    return get_deterministic_answer(question, ctx)
 
-    if any(k in q for k in ("health", "doing", "summary", "overview", "score")):
-        revenue_change = (
-            f" ({m['revenue']['change_pct']:+.1f}% vs last month)"
-            if m["revenue"]["change_pct"] is not None
-            else ""
-        )
-        expense_change = (
-            f" ({m['expenses']['change_pct']:+.1f}% vs last month)"
-            if m["expenses"]["change_pct"] is not None
-            else ""
-        )
-        return (
-            "## Financial snapshot\n\n"
-            "| Metric | Current period |\n"
-            "| --- | ---: |\n"
-            f"| Revenue | **{inr(m['revenue']['current'])}**{revenue_change} |\n"
-            f"| Expenses | **{inr(m['expenses']['current'])}**{expense_change} |\n"
-            f"| Net profit | **{inr(m['net_profit']['current'])}** |\n"
-            f"| Cash balance | **{inr(m['cash_balance']['current'])}** |\n"
-            f"| Outstanding receivables | **{inr(m['receivables']['outstanding'])}** |\n"
-            f"| Outstanding debt | **{inr(m['debt']['outstanding'])}** |\n\n"
-            "### Financial health\n\n"
-            f"Your score is **{h['score']}/100** — **{h['label']}**. {h['interpretation']}\n\n"
-            f"- Overdue receivables: **{inr(m['receivables']['overdue'])}**\n"
-            f"- Monthly EMI: **{inr(m['debt']['monthly_emi'])}**"
-        )
-
-    if "cash" in q and ("flow" in q or "shortage" in q or "forecast" in q):
-        if f:
-            outlook = (
-                "> **Watch item:** The forecast shows a shortfall on some days. "
-                "Accelerate collections or arrange a credit line."
-                if f["min_daily_net"] < 0
-                else "> **Outlook:** No projected cash shortfall over the next 30 days."
-            )
-            return (
-                "## 30-day cash-flow outlook\n\n"
-                f"Forecast model: **{f['model']}** with **{f['confidence']}** confidence.\n\n"
-                "| Measure | Forecast |\n"
-                "| --- | ---: |\n"
-                f"| Predicted net cash flow | **{inr(f['predicted_net_cash_flow'])}** |\n"
-                f"| Minimum daily net flow | **{inr(f['min_daily_net'])}** |\n\n"
-                f"{outlook}"
-            )
-        return (
-            "## Cash-flow outlook\n\n"
-            "There isn't enough transaction history to build a reliable cash-flow forecast yet."
-        )
-
-    if "owe" in q or "receivab" in q or "invoice" in q:
-        if not ctx["top_receivables"]:
-            return "## Receivables\n\nYou have no outstanding receivables right now."
-        lines = ["## Largest outstanding receivables", ""]
-        for inv in ctx["top_receivables"]:
-            outstanding = max(0.0, inv.get("total_amount", 0) - inv.get("paid_amount", 0))
-            customer = str(inv.get("customer_name") or "Unknown customer").replace("\n", " ")
-            due_date = str(inv.get("due_date", ""))[:10] or "No due date"
-            lines.append(f"- **{customer}** — **{inr(outstanding)}** due **{due_date}**")
-        lines.extend(["", f"**Total outstanding:** **{inr(m['receivables']['outstanding'])}**."])
-        return "\n".join(lines)
-
-    if "expense" in q or "spend" in q or "cost" in q:
-        if not ctx["recent_expenses"]:
-            return "## Expenses\n\nNo expenses have been recorded yet."
-        lines = ["## Recent expenses", ""]
-        for e in ctx["recent_expenses"]:
-            date = str(e.get("date", ""))[:10] or "Undated"
-            description = str(e.get("description") or "Unlabelled expense").replace("\n", " ")
-            lines.append(f"- **{date}** — {description}: **{inr(e.get('amount', 0))}**")
-        lines.extend(["", f"**Current-month expenses:** **{inr(m['expenses']['current'])}**."])
-        return "\n".join(lines)
-
-    if "loan" in q or "ready" in q or "borrow" in q:
-        suggestions = "\n".join(
-            f"{index}. {suggestion}"
-            for index, suggestion in enumerate(lr["improvement_suggestions"], start=1)
-        ) or "1. Continue building a consistent transaction history."
-        return (
-            "## Loan readiness\n\n"
-            f"Your score is **{lr['readiness_score']}/100** — **{lr['label']}**.\n\n"
-            f"{lr['overall_recommendation']}\n\n"
-            "### Recommended next steps\n\n"
-            f"{suggestions}"
-        )
-
-    if "risk" in q:
-        risks = r["risks"]
-        if not risks:
-            return f"## Risk review\n\nNo significant risks detected. Risk score: **{r['risk_score']}/100**."
-        lines = [
-            "## Active financial risks",
-            "",
-            f"You have **{len(risks)}** active risk(s). Overall risk score: **{r['risk_score']}/100** "
-            f"(**{r['risk_level']}**).",
-        ]
-        for risk in risks:
-            lines.extend(
-                [
-                    "",
-                    f"- **{risk['severity'].upper()} — {risk['title']}**",
-                    f"  - Evidence: {risk['evidence']}",
-                    f"  - Action: {risk['recommended_action']}",
-                ]
-            )
-        return "\n".join(lines)
-
-    if "profit" in q:
-        margin = (
-            f"| Net margin | **{pct(m['net_profit']['current'] / m['revenue']['current'] * 100)}** |\n"
-            if m["revenue"]["current"]
-            else ""
-        )
-        return (
-            "## Profitability this month\n\n"
-            "| Measure | Amount |\n"
-            "| --- | ---: |\n"
-            f"| Revenue | **{inr(m['revenue']['current'])}** |\n"
-            f"| Expenses | **{inr(m['expenses']['current'])}** |\n"
-            f"| Net profit | **{inr(m['net_profit']['current'])}** |\n"
-            f"{margin}"
-        )
-
-    return (
-        "## Business overview\n\n"
-        f"This month, revenue is **{inr(m['revenue']['current'])}** and net profit is "
-        f"**{inr(m['net_profit']['current'])}**. Your financial-health score is "
-        f"**{h['score']}/100** — **{h['label']}**.\n\n"
-        "Ask me about **cash flow**, **receivables**, **expenses**, **risks**, "
-        "**loans**, or your **financial health**."
-    )
 
 def _deterministic_attachment_answer(question: str, ctx: dict, attachment: dict) -> str:
-    """Useful fallback when no external model is configured for an upload."""
+    """Useful fallback when reviewing an upload."""
     summary = str(attachment.get("summary") or f"Received {attachment.get('name', 'the file')}.")
     context = str(attachment.get("context") or "").strip()
     preview = context[:1800]
@@ -234,9 +100,7 @@ def _deterministic_attachment_answer(question: str, ctx: dict, attachment: dict)
         file_section = f"## File received\n\n{summary}"
     business_answer = _deterministic_answer(question, ctx)
     return (
-        f"{file_section}\n\n---\n\n## Business-data context\n\n{business_answer}\n\n"
-        "Configure an **OpenAI or Gemini API key** (see AI_PROVIDER_SETUP.md) to enable "
-        "AI-powered reasoning across this attachment."
+        f"{file_section}\n\n---\n\n## Business-data context\n\n{business_answer}"
     )
 
 

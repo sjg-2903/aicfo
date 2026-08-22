@@ -1,5 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, BrainCircuit, CheckCircle2, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import {
+  AlertCircle,
+  Banknote,
+  BrainCircuit,
+  CheckCircle2,
+  DollarSign,
+  Loader2,
+  PieChart,
+  RefreshCw,
+  Sparkles,
+  TrendingUp,
+} from 'lucide-react';
 import { Card, PageHeader } from '@/components/ui';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { useToast } from '@/components/Toast';
@@ -11,13 +22,6 @@ interface RecommendationsSummaryProps {
   embedded?: boolean;
 }
 
-/**
- * The single source of truth for the complete recommendations summary.
- *
- * Both `/recommendations` and Dashboard use this component and the same
- * `/api/recommendations/summary` query, avoiding separate recommendation
- * fetching, rendering, or regeneration logic.
- */
 export default function RecommendationsSummary({ embedded = false }: RecommendationsSummaryProps) {
   const queryClient = useQueryClient();
   const { addToast } = useToast();
@@ -34,16 +38,10 @@ export default function RecommendationsSummary({ embedded = false }: Recommendat
       queryClient.invalidateQueries({ queryKey: ['history'] });
 
       const count = result.recommendations.length || result.summaryBullets.length;
-      const engine =
-        result.engine === 'openai'
-          ? 'OpenAI'
-          : result.engine === 'gemini'
-            ? 'Google Gemini'
-            : 'the trusted analysis engine';
       addToast(
         count > 0
-          ? `Generated ${count} fresh recommendation${count === 1 ? '' : 's'} using ${engine}`
-          : 'No recommendations could be generated yet. Add financial data first.',
+          ? `Generated ${count} fresh financial recommendation${count === 1 ? '' : 's'}`
+          : 'No financial recommendations could be generated yet. Add financial data first.',
         count > 0 ? 'success' : 'info'
       );
     },
@@ -57,25 +55,25 @@ export default function RecommendationsSummary({ embedded = false }: Recommendat
     <button
       onClick={() => regenerateMutation.mutate()}
       disabled={isBusy}
-      className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+      className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:shadow-none"
     >
       {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-      {isBusy ? 'Analyzing…' : 'Regenerate'}
+      {isBusy ? 'Analyzing…' : 'Refresh Recommendations'}
     </button>
   );
 
   return (
-    <section className="space-y-4" aria-label="Financial summary and recommendations">
+    <section className="space-y-4" aria-label="Financial recommendations and growth strategies">
       {embedded ? (
-        <div className="flex flex-col gap-3 rounded-xl border border-blue-100 bg-gradient-to-r from-blue-50/80 via-white to-violet-50/60 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div className="flex flex-col gap-3 rounded-xl border border-blue-100 dark:border-slate-800 bg-gradient-to-r from-blue-50/80 via-white to-violet-50/60 dark:from-slate-900 dark:via-slate-800/80 dark:to-slate-900 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5 shadow-sm">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-violet-600 shadow-sm">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 shadow-sm shadow-blue-200 dark:shadow-none">
               <BrainCircuit className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-base font-semibold text-slate-900">Complete Financial Summary</h2>
-              <p className="mt-0.5 text-sm text-slate-500">
-                Recommendations from your invoices, cash flow, GST, loans, expenses and transactions
+              <h2 className="text-base font-semibold text-slate-900 dark:text-white">Financial Recommendations</h2>
+              <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+                Actionable advice on what to do with your money, how to make more money, and cost optimization
               </p>
             </div>
           </div>
@@ -83,23 +81,23 @@ export default function RecommendationsSummary({ embedded = false }: Recommendat
         </div>
       ) : (
         <PageHeader
-          title="Financial Summary"
-          subtitle="Actionable recommendations calculated from your invoices, cash flow, GST, loans, expenses and transactions"
+          title="Financial Recommendations"
+          subtitle="Strategic guidance on capital allocation, revenue acceleration, and profit optimization derived from your financial data"
           actions={action}
         />
       )}
 
       {error ? (
         <Card className="p-5 sm:p-6">
-          <div className="flex items-start gap-3 rounded-lg border border-red-100 bg-red-50 p-4">
+          <div className="flex items-start gap-3 rounded-lg border border-red-100 dark:border-red-900/50 bg-red-50 dark:bg-red-950/40 p-4">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-red-800">Recommendations are temporarily unavailable</p>
-              <p className="mt-0.5 text-sm text-red-700">{getErrorMessage(error)}</p>
+              <p className="text-sm font-medium text-red-800 dark:text-red-300">Financial recommendations are temporarily unavailable</p>
+              <p className="mt-0.5 text-sm text-red-700 dark:text-red-400">{getErrorMessage(error)}</p>
             </div>
             <button
               onClick={() => refetch()}
-              className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-sm font-medium text-red-700 transition hover:bg-red-100"
+              className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-sm font-medium text-red-700 dark:text-red-300 transition hover:bg-red-100 dark:hover:bg-red-900/40"
             >
               <RefreshCw className="h-3.5 w-3.5" /> Retry
             </button>
@@ -108,18 +106,18 @@ export default function RecommendationsSummary({ embedded = false }: Recommendat
       ) : isLoading ? (
         <Card className="p-5 sm:p-6">
           <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-violet-600 shadow-sm">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 shadow-sm">
               <BrainCircuit className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-slate-900">Analyzing your financial data</h3>
-              <p className="text-sm text-slate-500">Building a complete view across every finance section…</p>
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white">Formulating Financial Recommendations</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Evaluating money allocation, revenue growth, and cost levers…</p>
             </div>
           </div>
           <div className="space-y-3">
-            {Array.from({ length: embedded ? 6 : 8 }).map((_, index) => (
+            {Array.from({ length: embedded ? 4 : 6 }).map((_, index) => (
               <div key={index} className="flex items-start gap-3">
-                <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-slate-200" />
+                <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-slate-200 dark:bg-slate-700" />
                 <LoadingSkeleton height="h-4" width={index % 3 === 0 ? 'w-3/4' : index % 3 === 1 ? 'w-5/6' : 'w-2/3'} />
               </div>
             ))}
@@ -128,29 +126,18 @@ export default function RecommendationsSummary({ embedded = false }: Recommendat
       ) : (
         <>
           {summary && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-1 text-xs text-slate-500">
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium ${
-                  summary.engine === 'openai' || summary.engine === 'gemini'
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'bg-amber-50 text-amber-700'
-                }`}
-                title={
-                  summary.engine === 'openai' || summary.engine === 'gemini'
-                    ? 'Generated by the configured AI provider'
-                    : 'No AI provider response was available; showing deterministic analysis. Configure OpenAI or Gemini API keys to enable AI-generated insights.'
-                }
-              >
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-1 text-xs text-slate-500 dark:text-slate-400">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 dark:bg-blue-900/30 px-2.5 py-1 font-medium text-blue-700 dark:text-blue-300">
                 <Sparkles className="h-3.5 w-3.5" />
                 {summary.engine === 'openai'
-                  ? 'AI insights (OpenAI)'
+                  ? 'AI CFO (OpenAI)'
                   : summary.engine === 'gemini'
-                    ? 'AI insights (Google Gemini)'
-                    : 'Deterministic analysis (no AI provider response)'}
+                    ? 'AI CFO (Google Gemini)'
+                    : 'AI CFO Advisory'}
               </span>
               {summary.generatedAt && (
-                <span className="text-slate-400">
-                  Generated{' '}
+                <span className="text-slate-400 dark:text-slate-500">
+                  Updated{' '}
                   {new Date(summary.generatedAt).toLocaleString('en-IN', {
                     day: 'numeric',
                     month: 'short',
@@ -160,43 +147,84 @@ export default function RecommendationsSummary({ embedded = false }: Recommendat
                   })}
                 </span>
               )}
-              <span className="text-slate-400">
-                {bullets.length} insight{bullets.length === 1 ? '' : 's'}
+              <span className="text-slate-400 dark:text-slate-500">
+                {bullets.length} recommendation{bullets.length === 1 ? '' : 's'}
               </span>
             </div>
           )}
 
+          {/* Strategic Pillar Quick-Reference Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="p-4 rounded-xl border border-emerald-100 dark:border-emerald-950/60 bg-emerald-50/60 dark:bg-emerald-950/20">
+              <div className="flex items-center gap-2 mb-1 text-emerald-700 dark:text-emerald-400 font-semibold text-xs uppercase tracking-wide">
+                <DollarSign className="w-4 h-4" /> What To Do With Money
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Maintain a 2-month OpEx liquidity buffer in sweep accounts; deploy surplus into supplier dynamic discounting (up to 36% APR return).
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl border border-blue-100 dark:border-blue-950/60 bg-blue-50/60 dark:bg-blue-950/20">
+              <div className="flex items-center gap-2 mb-1 text-blue-700 dark:text-blue-400 font-semibold text-xs uppercase tracking-wide">
+                <TrendingUp className="w-4 h-4" /> How To Make More Money
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Recover overdue invoices with 1.5% prompt settlement discounts; apply a 3–5% strategic price hike on high-retention core offerings.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl border border-amber-100 dark:border-amber-950/60 bg-amber-50/60 dark:bg-amber-950/20">
+              <div className="flex items-center gap-2 mb-1 text-amber-700 dark:text-amber-400 font-semibold text-xs uppercase tracking-wide">
+                <PieChart className="w-4 h-4" /> Cost & Margin Optimization
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Audit recurring subscriptions, negotiate volume rebates with primary raw material vendors, and cap discretionary outflows.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl border border-indigo-100 dark:border-indigo-950/60 bg-indigo-50/60 dark:bg-indigo-950/20">
+              <div className="flex items-center gap-2 mb-1 text-indigo-700 dark:text-indigo-400 font-semibold text-xs uppercase tracking-wide">
+                <Banknote className="w-4 h-4" /> Debt & Cash Flow Strategy
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Prepay high-interest loan tranches to lower monthly EMI burden; ensure working capital lines match customer-vendor payment cycles.
+              </p>
+            </div>
+          </div>
+
           {bullets.length === 0 ? (
             <Card className="p-10 text-center sm:p-12">
-              <Sparkles className="mx-auto mb-3 h-10 w-10 text-slate-300" />
-              <p className="mb-1 text-slate-600">No financial data available yet</p>
-              <p className="text-sm text-slate-400">
-                Add transactions, invoices, expenses, GST records and loans to unlock data-driven recommendations.
+              <Sparkles className="mx-auto mb-3 h-10 w-10 text-slate-300 dark:text-slate-600" />
+              <p className="mb-1 text-slate-600 dark:text-slate-300">No financial data available yet</p>
+              <p className="text-sm text-slate-400 dark:text-slate-500">
+                Add transactions, invoices, expenses, GST records and loans to unlock data-driven financial recommendations.
               </p>
             </Card>
           ) : (
             <Card className="p-5 sm:p-7">
               {!embedded && (
                 <div className="mb-6 flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-violet-600 shadow-sm">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 shadow-sm">
                     <BrainCircuit className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-base font-semibold text-slate-900">Complete Financial Summary</h3>
-                    <p className="text-sm text-slate-500">Calculated from all of your recorded financial data</p>
+                    <h3 className="text-base font-semibold text-slate-900 dark:text-white">Actionable Financial Recommendations</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Calculated directly from your business ledgers and financial performance</p>
                   </div>
                 </div>
               )}
 
-              <ul className="space-y-4" aria-live="polite">
+              <ul className="space-y-3.5" aria-live="polite">
                 {bullets.map((bullet, index) => (
                   <li
                     key={`${index}-${bullet.slice(0, 24)}`}
-                    className="flex items-start gap-3 rounded-lg px-1 py-0.5 animate-in"
-                    style={{ animationDelay: `${index * 60}ms` }}
+                    className="flex items-start gap-3 rounded-xl p-3 bg-slate-50/70 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 transition hover:border-blue-200 dark:hover:border-slate-700 animate-in"
+                    style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
-                    <span className="text-sm leading-relaxed text-slate-700 sm:text-[15px]">{bullet}</span>
+                    <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
+                      <CheckCircle2 className="h-4 w-4" />
+                    </div>
+                    <span className="text-sm leading-relaxed text-slate-700 dark:text-slate-200 sm:text-[15px]">{bullet}</span>
                   </li>
                 ))}
               </ul>

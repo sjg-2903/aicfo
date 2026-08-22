@@ -347,7 +347,7 @@ async def generate_summary_bullets(
 
 
 def _deterministic_summary_bullets(analysis: dict, recs: list[dict]) -> list[str]:
-    """Build bullet-point sentences from the calculated analysis without an LLM."""
+    """Build actionable financial recommendations on capital deployment, revenue growth, and cost savings."""
     from app.utils.format import inr  # imported lazily to avoid cycle
 
     metrics = analysis.get("calculated_analysis", {}).get("metrics") or {}
@@ -359,86 +359,81 @@ def _deterministic_summary_bullets(analysis: dict, recs: list[dict]) -> list[str
 
     bullets: list[str] = []
 
-    # Revenue & expenses
     rev = metrics.get("revenue", {})
     exp = metrics.get("expenses", {})
-    if rev.get("current"):
-        change = rev.get("change_pct")
-        change_text = f" ({change:+.1f}% vs previous month)" if change is not None else ""
-        bullets.append(f"Revenue this month is {inr(rev['current'])}{change_text}.")
-    if exp.get("current"):
-        change = exp.get("change_pct")
-        change_text = f" ({change:+.1f}% vs previous month)" if change is not None else ""
-        bullets.append(f"Total expenses this month are {inr(exp['current'])}{change_text}.")
-
-    # Net profit
     net = metrics.get("net_profit", {})
-    if net.get("current") is not None:
-        bullets.append(f"Net profit stands at {inr(net['current'])}.")
-
-    # Cash balance
     cb = metrics.get("cash_balance", {})
-    if cb.get("current") is not None:
-        bullets.append(f"Current cash balance is {inr(cb['current'])}.")
-
-    # Receivables
     recv = metrics.get("receivables", {})
-    if recv.get("outstanding"):
-        bullets.append(
-            f"Outstanding receivables total {inr(recv['outstanding'])} with {inr(recv.get('overdue', 0))} overdue."
-        )
-
-    # Debt
     debt = metrics.get("debt", {})
-    if debt.get("outstanding"):
+
+    rev_val = float(rev.get("current") or 0)
+    exp_val = float(exp.get("current") or 0)
+    net_val = float(net.get("current") or 0)
+    cash_val = float(cb.get("current") or 0)
+    recv_val = float(recv.get("outstanding") or 0)
+    overdue_val = float(recv.get("overdue") or 0)
+    debt_val = float(debt.get("outstanding") or 0)
+    emi_val = float(debt.get("monthly_emi") or 0)
+
+    # 1. Capital Allocation: What to do with money
+    op_reserve = round(exp_val * 2.0, 2)
+    surplus = max(0.0, cash_val - op_reserve)
+    if surplus > 0:
         bullets.append(
-            f"Outstanding debt is {inr(debt['outstanding'])} with monthly EMIs of {inr(debt.get('monthly_emi', 0))}."
+            f"Money Allocation: Maintain {inr(op_reserve)} (2 months OpEx) in an instant-access sweep account, and deploy the remaining {inr(surplus)} surplus into supplier early-payment discounts for a risk-free ~36% annualized return."
+        )
+    elif cash_val > 0:
+        bullets.append(
+            f"Money Allocation: Preserve current cash balance of {inr(cash_val)} as working capital reserve to maintain uninterrupted payroll and operations."
         )
 
-    # Health
-    if health.get("score") is not None:
+    # 2. Revenue Growth: How to make more money
+    if overdue_val > 0:
         bullets.append(
-            f"Financial health score is {health['score']}/100 ({health.get('label', 'N/A')})."
+            f"Revenue Acceleration: Recover {inr(overdue_val)} in overdue customer invoices immediately by sending automated reminders with a 1.5% prompt-pay settlement discount."
+        )
+    elif recv_val > 0:
+        bullets.append(
+            f"Cash Acceleration: Collect {inr(recv_val)} in outstanding receivables on schedule by shortening standard credit terms from Net-30 to Net-15 for new orders."
         )
 
-    # Risk
-    if risk.get("risk_score") is not None:
-        active = (risk.get("summary") or {}).get("active_risks", 0)
+    # 3. Profit Maximization & Pricing Strategy
+    if rev_val > 0:
+        price_gain = round(rev_val * 0.04, 2)
         bullets.append(
-            f"Risk score is {risk['risk_score']}/100 ({risk.get('risk_level', 'N/A')}) with {active} active risk(s)."
+            f"Profit Maximization: Implement a targeted 3%–5% price adjustment across top-selling products to add +{inr(price_gain)} in direct monthly net profit."
         )
 
-    # Loan readiness
-    if readiness.get("readiness_score") is not None:
+    # 4. Cost Optimization & Margin Expansion
+    if exp_val > 0:
+        save_val = round(exp_val * 0.06, 2)
         bullets.append(
-            f"Loan readiness score is {readiness['readiness_score']}/100 ({readiness.get('label', 'N/A')})."
+            f"Cost Optimization: Audit discretionary subscriptions and renegotiate raw material supplier rates to free up {inr(save_val)}/month in operational cash flow."
         )
 
-    # Forecast
+    # 5. Debt Strategy
+    if debt_val > 0 and emi_val > 0:
+        bullets.append(
+            f"Debt Strategy: Prepay high-interest loan tranches from operating profit to lower your {inr(emi_val)}/month EMI commitment and increase debt-service headroom."
+        )
+
+    # 6. Cash Flow & Runway
     if forecast:
         predicted_net = forecast.get("predicted_net_cash_flow")
         if predicted_net is None:
             predicted_net = (forecast.get("summary") or {}).get("predicted_net_cash_flow")
         if predicted_net is not None:
             bullets.append(
-                f"30-day forecast projects a net cash flow of {inr(predicted_net)} ({forecast.get('model', 'model')}, {forecast.get('confidence', 'N/A')} confidence)."
+                f"Cash Flow Strategy: 30-day forecast projects {inr(predicted_net)} net flow; sync client payment milestones with vendor payment cycles to preserve positive float."
             )
 
-    # Invoice / expense / GST / loan counts
-    for section_key, label in [
-        ("invoices", "invoices"), ("expenses", "expenses"),
-        ("gst_records", "GST records"), ("loans", "loans"),
-        ("transactions", "transactions"),
-    ]:
-        sec = sections.get(section_key, {})
-        total = sec.get("total_records_analyzed", 0)
-        if total:
-            bullets.append(f"{total} {label} on record have been analyzed.")
-
-    # Top deterministic recommendation
+    # 7. Action recommendations
     if recs:
-        top = recs[0]
-        bullets.append(f"Top priority: {top.get('title', 'N/A')} — {top.get('recommended_action', '')}")
+        for r in recs[:2]:
+            act = r.get("recommended_action")
+            title = r.get("title")
+            if act and title:
+                bullets.append(f"Strategic Action: {title} — {act}")
 
     return bullets
 

@@ -94,40 +94,40 @@ export default function CashFlow() {
       {/* Inflow/outflow + risks */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="p-5">
-          <h3 className="text-sm font-semibold text-slate-900 mb-4">This Month</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">This Month</h3>
           <div className="space-y-3">
             <Row label="Cash Inflow" value={monthInflow} positive />
             <Row label="Cash Outflow" value={monthOutflow} negative />
-            <div className="border-t border-slate-100 pt-3">
+            <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
               <Row label="Net Cash Flow" value={netCashFlow} positive bold />
             </div>
           </div>
         </Card>
 
         <Card className="p-5">
-          <h3 className="text-sm font-semibold text-slate-900 mb-4">Projected (next 30d)</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Projected (next 30d)</h3>
           <div className="space-y-3">
             <Row label="Predicted Inflow" value={predictedInflow} positive />
             <Row label="Predicted Outflow" value={predictedOutflow} negative />
-            <div className="border-t border-slate-100 pt-3">
+            <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
               <Row label="Predicted Net" value={predictedNet} negative bold />
             </div>
           </div>
-          <p className="text-xs text-slate-400 mt-3">
-            Forecast confidence: <span className="font-semibold text-slate-600">{confidence}%</span>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">
+            Forecast confidence: <span className="font-semibold text-slate-600 dark:text-slate-300">{confidence}%</span>
           </p>
         </Card>
 
         <Card className="p-5 border-l-4 border-l-amber-500">
-          <h3 className="text-sm font-semibold text-slate-900 mb-4">Risk Indicators</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Risk Indicators</h3>
           <div className="space-y-3">
-            {riskPoints.length === 0 && <p className="text-xs text-slate-400">No projected cash shortfalls in the next 30 days.</p>}
+            {riskPoints.length === 0 && <p className="text-xs text-slate-400 dark:text-slate-500">No projected cash shortfalls in the next 30 days.</p>}
             {riskPoints.map((r) => (
               <div key={r.date} className="flex items-start gap-2">
                 <span className="mt-1 w-2 h-2 rounded-full bg-amber-500 shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-slate-700">{r.date}</p>
-                  <p className="text-xs text-slate-500">{r.description}</p>
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{r.date}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{r.description}</p>
                 </div>
               </div>
             ))}
@@ -139,12 +139,12 @@ export default function CashFlow() {
 }
 
 function Metric({ label, value, icon, positive, negative }: { label: string; value: number; icon: React.ReactNode; positive?: boolean; negative?: boolean }) {
-  const tone = positive ? 'text-green-600' : negative ? 'text-red-600' : 'text-slate-900';
+  const tone = positive ? 'text-green-600 dark:text-green-400' : negative ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-white';
   return (
     <Card className="p-4 hover">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs text-slate-500">{label}</p>
-        <span className="text-slate-400">{icon}</span>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
+        <span className="text-slate-400 dark:text-slate-500">{icon}</span>
       </div>
       <p className={`text-lg font-bold ${tone}`}>{CURRENCY(value)}</p>
     </Card>
@@ -152,10 +152,10 @@ function Metric({ label, value, icon, positive, negative }: { label: string; val
 }
 
 function Row({ label, value, positive, negative, bold }: { label: string; value: number; positive?: boolean; negative?: boolean; bold?: boolean }) {
-  const tone = positive ? 'text-green-600' : negative ? 'text-red-600' : 'text-slate-900';
+  const tone = positive ? 'text-green-600 dark:text-green-400' : negative ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-white';
   return (
     <div className="flex items-center justify-between">
-      <span className={`text-sm ${bold ? 'font-semibold text-slate-700' : 'text-slate-500'}`}>{label}</span>
+      <span className={`text-sm ${bold ? 'font-semibold text-slate-700 dark:text-slate-200' : 'text-slate-500 dark:text-slate-400'}`}>{label}</span>
       <span className={`text-sm ${bold ? 'font-bold' : 'font-medium'} ${tone}`}>{CURRENCY(value)}</span>
     </div>
   );

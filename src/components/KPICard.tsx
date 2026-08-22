@@ -37,7 +37,6 @@ export const KPICard: React.FC<KPICardProps> = ({
 
   useEffect(() => {
     if (!loading) {
-      // Animate the number change
       const duration = 800;
       const start = Date.now();
       const startValue = displayValue;
@@ -82,7 +81,7 @@ export const KPICard: React.FC<KPICardProps> = ({
   return (
     <div
       className={cn(
-        'p-6 bg-white rounded-xl border border-slate-200 hover:shadow-lg transition-all duration-300',
+        'p-6 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 hover:shadow-lg transition-all duration-300',
         onClick && 'cursor-pointer',
         className
       )}
@@ -91,49 +90,49 @@ export const KPICard: React.FC<KPICardProps> = ({
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
-            <p className="text-sm font-medium text-slate-600">{title}</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{title}</p>
             {tooltip && (
               <div className="group relative">
-                <Info className="w-4 h-4 text-slate-400 cursor-help" />
-                <div className="hidden group-hover:block absolute z-10 top-full left-0 mt-2 bg-slate-900 text-white text-xs rounded p-2 w-48">
+                <Info className="w-4 h-4 text-slate-400 dark:text-slate-500 cursor-help" />
+                <div className="hidden group-hover:block absolute z-10 top-full left-0 mt-2 bg-slate-900 dark:bg-slate-800 border border-slate-700 text-white text-xs rounded p-2 w-48 shadow-lg">
                   {tooltip}
                 </div>
               </div>
             )}
           </div>
           <div className="flex items-baseline gap-2">
-            {prefix && <span className="text-sm text-slate-500">{prefix}</span>}
-            <p className="text-3xl font-bold text-slate-900">
+            {prefix && <span className="text-sm text-slate-500 dark:text-slate-400">{prefix}</span>}
+            <p className="text-3xl font-bold text-slate-900 dark:text-white">
               {loading ? '···' : formatValue(displayValue)}
             </p>
-            {suffix && <span className="text-sm text-slate-500">{suffix}</span>}
-            {unit && <span className="text-sm text-slate-500">{unit}</span>}
+            {suffix && <span className="text-sm text-slate-500 dark:text-slate-400">{suffix}</span>}
+            {unit && <span className="text-sm text-slate-500 dark:text-slate-400">{unit}</span>}
           </div>
         </div>
 
         {icon && (
-          <div className="p-3 bg-blue-50 rounded-lg text-blue-600">{icon}</div>
+          <div className="p-3 bg-blue-50 dark:bg-blue-950/40 rounded-lg text-blue-600 dark:text-blue-400">{icon}</div>
         )}
       </div>
 
       {trend !== undefined && !loading && (
         <div className="flex items-center gap-1">
           {trendPositive ? (
-            <TrendingUp className="w-4 h-4 text-green-600" />
+            <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />
           ) : (
-            <TrendingDown className="w-4 h-4 text-red-600" />
+            <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400" />
           )}
-          <span className={trendPositive ? 'text-green-600' : 'text-red-600'}>
+          <span className={trendPositive ? 'text-green-600 dark:text-green-400 font-medium' : 'text-red-600 dark:text-red-400 font-medium'}>
             {trendPositive ? '+' : '-'}{trendPercentage.toFixed(1)}%
           </span>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
             {trendLabel || 'vs previous period'}
           </span>
         </div>
       )}
 
       {trend === undefined && trendLabel && !loading && (
-        <div className="text-xs text-slate-500">{trendLabel}</div>
+        <div className="text-xs text-slate-500 dark:text-slate-400">{trendLabel}</div>
       )}
     </div>
   );

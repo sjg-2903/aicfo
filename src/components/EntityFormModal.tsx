@@ -36,7 +36,7 @@ interface Props {
 }
 
 const inputClass =
-  'w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition';
+  'w-full px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/30 transition';
 
 export function EntityFormModal({ open, onClose, title, submitLabel = 'Save', fields, initial, submitting = false, onSubmit }: Props) {
   const [values, setValues] = useState<FormValues>(initial);
@@ -68,13 +68,18 @@ export function EntityFormModal({ open, onClose, title, submitLabel = 'Save', fi
           {fields.map((f) => (
             <div key={f.name} className={f.full ? 'sm:col-span-2' : ''}>
               {f.type === 'checkbox' ? (
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-600 mt-6">
-                  <input type="checkbox" checked={!!values[f.name]} onChange={(e) => set(f.name, e.target.checked)} className="w-4 h-4 rounded border-slate-300" />
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300 mt-6">
+                  <input
+                    type="checkbox"
+                    checked={!!values[f.name]}
+                    onChange={(e) => set(f.name, e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-blue-600"
+                  />
                   {f.label}
                 </label>
               ) : (
                 <>
-                  <label className="text-sm font-medium text-slate-600 block mb-1">{f.label}</label>
+                  <label className="text-sm font-medium text-slate-600 dark:text-slate-300 block mb-1">{f.label}</label>
                   {f.type === 'select' ? (
                     <select value={String(values[f.name] ?? '')} onChange={(e) => set(f.name, e.target.value)} className={inputClass}>
                       {(f.options || []).map((o) => (
@@ -101,10 +106,18 @@ export function EntityFormModal({ open, onClose, title, submitLabel = 'Save', fi
           ))}
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition cursor-pointer"
+          >
             Cancel
           </button>
-          <button type="submit" disabled={submitting} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-lg text-sm font-medium transition">
+          <button
+            type="submit"
+            disabled={submitting}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white rounded-lg text-sm font-medium transition cursor-pointer"
+          >
             {submitting ? 'Saving…' : submitLabel}
           </button>
         </div>

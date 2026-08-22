@@ -17,9 +17,9 @@ export function Card({
   return (
     <div
       className={cn(
-        'bg-white rounded-xl border border-slate-200 shadow-sm',
+        'bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors',
         'animate-in',
-        hover && 'transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 hover:border-blue-200',
+        hover && 'transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 hover:border-blue-200 dark:hover:border-blue-800',
         className
       )}
       style={{ animationDelay: `${delay}ms` }}
@@ -50,8 +50,8 @@ export function ChartCard({
       {(title || actions) && (
         <div className="flex items-start justify-between gap-3 mb-4">
           <div>
-            {title && <h3 className="text-base font-semibold text-slate-900">{title}</h3>}
-            {subtitle && <p className="text-sm text-slate-500 mt-0.5">{subtitle}</p>}
+            {title && <h3 className="text-base font-semibold text-slate-900 dark:text-white">{title}</h3>}
+            {subtitle && <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
           </div>
           {actions}
         </div>
@@ -74,8 +74,8 @@ export function PageHeader({
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
       <div className="animate-in">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{title}</h1>
-        {subtitle && <p className="text-sm text-slate-500 mt-1">{subtitle}</p>}
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{title}</h1>
+        {subtitle && <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{subtitle}</p>}
       </div>
       {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
     </div>
@@ -84,33 +84,33 @@ export function PageHeader({
 
 /** Status pill for severity / levels */
 const severityStyles: Record<string, { bg: string; text: string; dot: string }> = {
-  info: { bg: 'bg-slate-100', text: 'text-slate-700', dot: 'bg-slate-400' },
-  low: { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
-  medium: { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500' },
-  high: { bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-500' },
-  critical: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
-  good: { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
-  moderate: { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500' },
-  at_risk: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
-  strong: { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
-  weak: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
-  completed: { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
-  upcoming: { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
-  overdue: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
-  paid: { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
-  sent: { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
-  draft: { bg: 'bg-slate-100', text: 'text-slate-600', dot: 'bg-slate-400' },
-  active: { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
-  acknowledged: { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500' },
-  new: { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
-  success: { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
-  partial: { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500' },
-  failed: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
-  in_progress: { bg: 'bg-violet-50', text: 'text-violet-700', dot: 'bg-violet-500' },
-  open: { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
-  resolved: { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
-  ready: { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
-  not_ready: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
+  info: { bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-700 dark:text-slate-300', dot: 'bg-slate-400' },
+  low: { bg: 'bg-blue-50 dark:bg-blue-950/50', text: 'text-blue-700 dark:text-blue-300', dot: 'bg-blue-500' },
+  medium: { bg: 'bg-amber-50 dark:bg-amber-950/50', text: 'text-amber-700 dark:text-amber-300', dot: 'bg-amber-500' },
+  high: { bg: 'bg-orange-50 dark:bg-orange-950/50', text: 'text-orange-700 dark:text-orange-300', dot: 'bg-orange-500' },
+  critical: { bg: 'bg-red-50 dark:bg-red-950/50', text: 'text-red-700 dark:text-red-300', dot: 'bg-red-500' },
+  good: { bg: 'bg-green-50 dark:bg-green-950/50', text: 'text-green-700 dark:text-green-300', dot: 'bg-green-500' },
+  moderate: { bg: 'bg-amber-50 dark:bg-amber-950/50', text: 'text-amber-700 dark:text-amber-300', dot: 'bg-amber-500' },
+  at_risk: { bg: 'bg-red-50 dark:bg-red-950/50', text: 'text-red-700 dark:text-red-300', dot: 'bg-red-500' },
+  strong: { bg: 'bg-green-50 dark:bg-green-950/50', text: 'text-green-700 dark:text-green-300', dot: 'bg-green-500' },
+  weak: { bg: 'bg-red-50 dark:bg-red-950/50', text: 'text-red-700 dark:text-red-300', dot: 'bg-red-500' },
+  completed: { bg: 'bg-green-50 dark:bg-green-950/50', text: 'text-green-700 dark:text-green-300', dot: 'bg-green-500' },
+  upcoming: { bg: 'bg-blue-50 dark:bg-blue-950/50', text: 'text-blue-700 dark:text-blue-300', dot: 'bg-blue-500' },
+  overdue: { bg: 'bg-red-50 dark:bg-red-950/50', text: 'text-red-700 dark:text-red-300', dot: 'bg-red-500' },
+  paid: { bg: 'bg-green-50 dark:bg-green-950/50', text: 'text-green-700 dark:text-green-300', dot: 'bg-green-500' },
+  sent: { bg: 'bg-blue-50 dark:bg-blue-950/50', text: 'text-blue-700 dark:text-blue-300', dot: 'bg-blue-500' },
+  draft: { bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-600 dark:text-slate-400', dot: 'bg-slate-400' },
+  active: { bg: 'bg-blue-50 dark:bg-blue-950/50', text: 'text-blue-700 dark:text-blue-300', dot: 'bg-blue-500' },
+  acknowledged: { bg: 'bg-amber-50 dark:bg-amber-950/50', text: 'text-amber-700 dark:text-amber-300', dot: 'bg-amber-500' },
+  new: { bg: 'bg-blue-50 dark:bg-blue-950/50', text: 'text-blue-700 dark:text-blue-300', dot: 'bg-blue-500' },
+  success: { bg: 'bg-green-50 dark:bg-green-950/50', text: 'text-green-700 dark:text-green-300', dot: 'bg-green-500' },
+  partial: { bg: 'bg-amber-50 dark:bg-amber-950/50', text: 'text-amber-700 dark:text-amber-300', dot: 'bg-amber-500' },
+  failed: { bg: 'bg-red-50 dark:bg-red-950/50', text: 'text-red-700 dark:text-red-300', dot: 'bg-red-500' },
+  in_progress: { bg: 'bg-violet-50 dark:bg-violet-950/50', text: 'text-violet-700 dark:text-violet-300', dot: 'bg-violet-500' },
+  open: { bg: 'bg-blue-50 dark:bg-blue-950/50', text: 'text-blue-700 dark:text-blue-300', dot: 'bg-blue-500' },
+  resolved: { bg: 'bg-green-50 dark:bg-green-950/50', text: 'text-green-700 dark:text-green-300', dot: 'bg-green-500' },
+  ready: { bg: 'bg-green-50 dark:bg-green-950/50', text: 'text-green-700 dark:text-green-300', dot: 'bg-green-500' },
+  not_ready: { bg: 'bg-red-50 dark:bg-red-950/50', text: 'text-red-700 dark:text-red-300', dot: 'bg-red-500' },
 };
 
 export function Pill({ value, label }: { value: string; label?: string }) {
@@ -151,7 +151,6 @@ export function ScoreRing({
     const timer = setInterval(() => {
       const elapsed = Date.now() - start;
       const p = Math.min(elapsed / duration, 1);
-      // ease out cubic
       const eased = 1 - Math.pow(1 - p, 3);
       setDisplay(score * eased);
       if (p >= 1) clearInterval(timer);
@@ -174,7 +173,8 @@ export function ScoreRing({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#e2e8f0"
+          stroke="currentColor"
+          className="text-slate-200 dark:text-slate-800"
           strokeWidth={stroke}
         />
         <circle
@@ -191,10 +191,10 @@ export function ScoreRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-bold text-slate-900" style={{ fontSize: size * 0.24 }}>
+        <span className="font-bold text-slate-900 dark:text-white" style={{ fontSize: size * 0.24 }}>
           {Math.round(display)}
         </span>
-        {label && <span className="text-xs text-slate-500 font-medium">{label}</span>}
+        {label && <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{label}</span>}
       </div>
     </div>
   );
@@ -213,11 +213,11 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center text-center py-12 px-4 animate-in">
-      <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-4">
+      <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 mb-4">
         {icon || <Inbox className="w-7 h-7" />}
       </div>
-      <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-      {description && <p className="text-sm text-slate-500 mt-1 max-w-sm">{description}</p>}
+      <h3 className="text-base font-semibold text-slate-900 dark:text-white">{title}</h3>
+      {description && <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-sm">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );
@@ -232,15 +232,15 @@ export function ErrorState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center text-center py-12 px-4">
-      <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-4">
+      <div className="w-14 h-14 rounded-full bg-red-50 dark:bg-red-950/50 flex items-center justify-center text-red-500 mb-4">
         <AlertCircle className="w-7 h-7" />
       </div>
-      <h3 className="text-base font-semibold text-slate-900">Something went wrong</h3>
-      <p className="text-sm text-slate-500 mt-1">{message || 'Unable to load data. Please try again.'}</p>
+      <h3 className="text-base font-semibold text-slate-900 dark:text-white">Something went wrong</h3>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{message || 'Unable to load data. Please try again.'}</p>
       {onRetry && (
         <button
           onClick={onRetry}
-          className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition"
+          className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition cursor-pointer"
         >
           <RefreshCw className="w-4 h-4" /> Retry
         </button>
@@ -259,7 +259,7 @@ export function ProgressBar({
   className?: string;
 }) {
   return (
-    <div className={cn('w-full bg-slate-100 rounded-full h-2 overflow-hidden', className)}>
+    <div className={cn('w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden', className)}>
       <div
         className="h-full rounded-full transition-all duration-700"
         style={{ width: `${Math.min(value, 100)}%`, background: color || '#2563eb' }}

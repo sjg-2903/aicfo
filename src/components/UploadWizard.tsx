@@ -56,7 +56,6 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
   const [confirmResult, setConfirmResult] = useState<ImportResult | null>(null);
   const [rowErrors, setRowErrors] = useState<Record<number, string[]>>({});
 
-  // Reset the whole flow whenever the wizard re-opens.
   useEffect(() => {
     if (open) {
       setStep('select');
@@ -153,7 +152,7 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
     const errors: Record<number, string[]> = {};
     rows.forEach((row, idx) => {
       const hasAny = Object.values(row).some((v) => String(v ?? '').trim() !== '');
-      if (!hasAny) return; // fully empty rows are dropped
+      if (!hasAny) return;
       const rowIssues: string[] = [];
       for (const field of config.fields) {
         const value = String(row[field.key] ?? '').trim();
@@ -250,11 +249,11 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
             const passed = ['select', 'processing', 'review', 'done'].indexOf(step) > idx;
             return (
               <React.Fragment key={s}>
-                {idx > 0 && <div className={cn('h-px flex-1', passed || active ? 'bg-blue-500' : 'bg-slate-200')} />}
+                {idx > 0 && <div className={cn('h-px flex-1', passed || active ? 'bg-blue-500' : 'bg-slate-200 dark:bg-slate-700')} />}
                 <div
                   className={cn(
                     'flex items-center gap-1.5 px-2.5 py-1 rounded-full transition',
-                    active ? 'bg-blue-600 text-white' : passed ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-400'
+                    active ? 'bg-blue-600 text-white' : passed ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
                   )}
                 >
                   {s === 'select' && <UploadCloud className="w-3.5 h-3.5" />}
@@ -285,14 +284,14 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
               onClick={() => inputRef.current?.click()}
               className={cn(
                 'border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200',
-                dragOver ? 'border-blue-500 bg-blue-50 scale-[1.01]' : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50'
+                dragOver ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 scale-[1.01]' : 'border-slate-300 dark:border-slate-700 hover:border-blue-400 hover:bg-slate-50 dark:hover:bg-slate-800/60'
               )}
             >
-              <UploadCloud className={cn('w-10 h-10 mx-auto mb-3 transition-colors', dragOver ? 'text-blue-600' : 'text-slate-300')} />
-              <p className="text-sm font-medium text-slate-700">
-                Drag &amp; drop files here, or <span className="text-blue-600">browse</span>
+              <UploadCloud className={cn('w-10 h-10 mx-auto mb-3 transition-colors', dragOver ? 'text-blue-600' : 'text-slate-300 dark:text-slate-600')} />
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                Drag &amp; drop files here, or <span className="text-blue-600 dark:text-blue-400 font-semibold">browse</span>
               </p>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                 CSV / Excel for direct import · PDF / PNG / JPG for AI document extraction
               </p>
               <input
@@ -311,24 +310,24 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
             {files.length > 0 && (
               <div className="space-y-2">
                 {files.map((f) => (
-                  <div key={f.id} className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 bg-slate-50">
+                  <div key={f.id} className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80">
                     {f.kind === 'tabular' ? (
-                      <FileSpreadsheet className="w-5 h-5 text-emerald-600 shrink-0" />
+                      <FileSpreadsheet className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     ) : (
-                      <ImageIcon className="w-5 h-5 text-violet-600 shrink-0" />
+                      <ImageIcon className="w-5 h-5 text-violet-600 dark:text-violet-400 shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-700 truncate">{f.file.name}</p>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{f.file.name}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">
                         {f.kind === 'tabular' ? 'Structured file — imported directly' : 'Document — AI extraction with review'}
                         {' · '}
                         {(f.file.size / 1024).toFixed(1)} KB
                       </p>
-                      {f.error && <p className="text-xs text-red-600 mt-0.5">{f.error}</p>}
+                      {f.error && <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">{f.error}</p>}
                     </div>
                     <button
                       onClick={() => setFiles((prev) => prev.filter((x) => x.id !== f.id))}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer"
                       aria-label="Remove file"
                     >
                       <X className="w-4 h-4" />
@@ -339,16 +338,16 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
             )}
 
             <div className="flex items-center justify-between gap-3 pt-1">
-              <div className="text-xs text-slate-400">
-                Expected columns: <span className="font-mono text-slate-500">{config.csvHint}</span>
-                <button onClick={downloadTemplate} className="ml-2 text-blue-600 hover:text-blue-700 font-medium">
+              <div className="text-xs text-slate-400 dark:text-slate-500">
+                Expected columns: <span className="font-mono text-slate-500 dark:text-slate-400">{config.csvHint}</span>
+                <button onClick={downloadTemplate} className="ml-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 font-medium cursor-pointer">
                   Download template
                 </button>
               </div>
               <button
                 onClick={processAll}
                 disabled={!files.some((f) => f.status === 'queued')}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-lg text-sm font-medium transition shadow-sm"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white rounded-lg text-sm font-medium transition shadow-sm cursor-pointer"
               >
                 <UploadCloud className="w-4 h-4" />
                 {files.some((f) => f.status === 'queued') ? `Upload ${files.filter((f) => f.status === 'queued').length} file(s)` : 'Upload'}
@@ -361,7 +360,7 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
         {step === 'processing' && (
           <div className="space-y-3">
             {files.map((f) => (
-              <div key={f.id} className="p-4 rounded-lg border border-slate-200">
+              <div key={f.id} className="p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80">
                 <div className="flex items-center gap-3">
                   {f.kind === 'tabular' ? (
                     <FileSpreadsheet className="w-5 h-5 text-emerald-600 shrink-0" />
@@ -369,9 +368,9 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
                     <ImageIcon className="w-5 h-5 text-violet-600 shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-700 truncate">{f.file.name}</p>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{f.file.name}</p>
                     <div className="flex items-center gap-2 mt-1.5">
-                      <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                         <div
                           className={cn(
                             'h-full rounded-full transition-all duration-300',
@@ -380,7 +379,7 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
                           style={{ width: `${f.status === 'error' ? 100 : f.progress}%` }}
                         />
                       </div>
-                      <span className="text-xs text-slate-400 w-10 text-right">
+                      <span className="text-xs text-slate-400 dark:text-slate-500 w-10 text-right">
                         {f.status === 'success' || f.status === 'extracted' ? '100%' : `${f.progress}%`}
                       </span>
                     </div>
@@ -391,17 +390,17 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
                   {f.status === 'error' && <XCircle className="w-5 h-5 text-red-500 shrink-0" />}
                 </div>
                 {f.status === 'success' && f.importResult && (
-                  <p className="text-xs text-slate-500 mt-2">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
                     {f.importResult.successful_rows} saved · {f.importResult.duplicates} duplicate(s) skipped ·{' '}
                     {f.importResult.failed_rows} invalid row(s)
                   </p>
                 )}
                 {f.status === 'extracted' && f.extraction && (
-                  <p className="text-xs text-slate-500 mt-2">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
                     {f.extraction.row_count} record(s) detected — pending your review
                   </p>
                 )}
-                {f.status === 'error' && f.error && <p className="text-xs text-red-600 mt-2">{f.error}</p>}
+                {f.status === 'error' && f.error && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{f.error}</p>}
               </div>
             ))}
           </div>
@@ -412,14 +411,14 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
           <>
             <div className="space-y-2">
               {reviewNotes.map((n, i) => (
-                <div key={i} className="flex items-start gap-2 p-3 rounded-lg bg-violet-50 border border-violet-100 text-xs text-violet-700">
+                <div key={i} className="flex items-start gap-2 p-3 rounded-lg bg-violet-50 dark:bg-violet-950/40 border border-violet-100 dark:border-violet-900/40 text-xs text-violet-700 dark:text-violet-300">
                   <ScanLine className="w-4 h-4 shrink-0 mt-0.5" />
                   <p>
                     <span className="font-semibold">{n.file}:</span> {n.note}
                   </p>
                 </div>
               ))}
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-100 text-xs text-amber-700">
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/40 text-xs text-amber-700 dark:text-amber-300">
                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                 <p>
                   Review, correct or remove the extracted rows below. <span className="font-semibold">Nothing is saved until you confirm.</span>
@@ -427,13 +426,13 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 overflow-hidden">
+            <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200">
+                    <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                       {config.fields.map((f) => (
-                        <th key={f.key} className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 whitespace-nowrap">
+                        <th key={f.key} className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">
                           {f.label}
                           {f.required && <span className="text-red-500">*</span>}
                         </th>
@@ -443,7 +442,7 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
                   </thead>
                   <tbody>
                     {reviewRows.map((row, idx) => (
-                      <tr key={idx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition">
+                      <tr key={idx} className="border-b border-slate-100 dark:border-slate-800/80 last:border-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
                         {config.fields.map((f) => {
                           const value = row[f.key] ?? '';
                           const hasError = rowErrors[idx]?.some((e) => e.includes(f.label)) || false;
@@ -468,8 +467,8 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
                                   className={cn(
                                     'w-full min-w-[110px] px-2 py-1.5 border rounded-lg text-xs outline-none transition',
                                     hasError
-                                      ? 'border-red-400 focus:border-red-500 bg-red-50'
-                                      : 'border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100'
+                                      ? 'border-red-400 focus:border-red-500 bg-red-50 dark:bg-red-950/40 text-red-900 dark:text-red-200'
+                                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/30'
                                   )}
                                 />
                               )}
@@ -479,7 +478,7 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
                         <td className="px-2 py-1.5">
                           <button
                             onClick={() => removeRow(idx)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer"
                             aria-label="Remove row"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -493,7 +492,7 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
             </div>
 
             {Object.keys(rowErrors).length > 0 && (
-              <p className="text-xs text-red-600">
+              <p className="text-xs text-red-600 dark:text-red-400">
                 Please fix the highlighted fields — required values are missing or numbers are invalid.
               </p>
             )}
@@ -501,21 +500,21 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
             <div className="flex items-center justify-between gap-2">
               <button
                 onClick={addEmptyRow}
-                className="inline-flex items-center gap-1.5 px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium transition"
+                className="inline-flex items-center gap-1.5 px-3 py-2 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition cursor-pointer"
               >
                 <Plus className="w-4 h-4" /> Add row
               </button>
               <div className="flex gap-2">
                 <button
                   onClick={() => setStep('done')}
-                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition"
+                  className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition cursor-pointer"
                 >
                   Discard extracted data
                 </button>
                 <button
                   onClick={confirmReview}
                   disabled={confirming}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-lg text-sm font-medium transition shadow-sm"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white rounded-lg text-sm font-medium transition shadow-sm cursor-pointer"
                 >
                   {confirming ? (
                     <>
@@ -543,7 +542,7 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
             </div>
 
             {files.filter((f) => f.status === 'success' || f.status === 'extracted' || f.status === 'error').map((f) => (
-              <div key={f.id} className="flex items-start gap-3 p-3 rounded-lg border border-slate-200">
+              <div key={f.id} className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                 {f.status === 'error' ? (
                   <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                 ) : f.status === 'success' ? (
@@ -552,40 +551,40 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
                   <ScanLine className="w-5 h-5 text-violet-500 shrink-0 mt-0.5" />
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-700 truncate">{f.file.name}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{f.file.name}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     {f.status === 'success' && f.importResult && (
                       <>
                         {f.importResult.successful_rows} saved · {f.importResult.duplicates} duplicate(s) · {f.importResult.failed_rows} invalid
                       </>
                     )}
                     {f.status === 'extracted' && `${f.extraction?.row_count || 0} record(s) extracted for review`}
-                    {f.status === 'error' && <span className="text-red-600">{f.error}</span>}
+                    {f.status === 'error' && <span className="text-red-600 dark:text-red-400">{f.error}</span>}
                   </p>
                 </div>
               </div>
             ))}
 
             {confirmResult && (
-              <div className="p-3 rounded-lg bg-green-50 border border-green-100 text-sm text-green-800">
+              <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/40 border border-green-100 dark:border-green-900/40 text-sm text-green-800 dark:text-green-200">
                 <p className="font-medium">
                   <CheckCircle2 className="w-4 h-4 inline mr-1.5 -mt-0.5" />
                   Confirmed data saved
                 </p>
-                <p className="text-xs text-green-700 mt-1">
+                <p className="text-xs text-green-700 dark:text-green-300 mt-1">
                   {confirmResult.successful_rows} saved · {confirmResult.duplicates} duplicate(s) skipped · {confirmResult.failed_rows} invalid
                 </p>
               </div>
             )}
 
             {allErrors.length > 0 && (
-              <details className="rounded-lg border border-amber-200 bg-amber-50">
-                <summary className="cursor-pointer px-4 py-2.5 text-sm font-medium text-amber-800 flex items-center gap-2">
+              <details className="rounded-lg border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/40">
+                <summary className="cursor-pointer px-4 py-2.5 text-sm font-medium text-amber-800 dark:text-amber-200 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4" /> View validation details ({allErrors.length})
                 </summary>
                 <ul className="px-4 pb-3 space-y-1 max-h-44 overflow-y-auto">
                   {allErrors.map((e, i) => (
-                    <li key={i} className="text-xs text-amber-800">
+                    <li key={i} className="text-xs text-amber-800 dark:text-amber-300">
                       <span className="font-medium">{e.file}:</span> {e.message}
                     </li>
                   ))}
@@ -596,13 +595,13 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
             <div className="flex justify-end gap-2">
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition"
+                className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition cursor-pointer"
               >
                 Close
               </button>
               <button
                 onClick={finish}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition shadow-sm"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition shadow-sm cursor-pointer"
               >
                 Done — view {config.label.toLowerCase()}
               </button>
@@ -615,11 +614,11 @@ export default function UploadWizard({ entity, open, onClose, onComplete }: Uplo
 }
 
 function SummaryStat({ label, value, tone }: { label: string; value: number; tone: 'green' | 'red' | 'blue' | 'slate' }) {
-  const color = tone === 'green' ? 'text-green-600' : tone === 'red' ? 'text-red-600' : tone === 'blue' ? 'text-blue-600' : 'text-slate-700';
+  const color = tone === 'green' ? 'text-green-600 dark:text-green-400' : tone === 'red' ? 'text-red-600 dark:text-red-400' : tone === 'blue' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300';
   return (
-    <div className="p-3 rounded-lg bg-slate-50 text-center">
+    <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-transparent dark:border-slate-700/60 text-center">
       <p className={cn('text-xl font-bold', color)}>{value}</p>
-      <p className="text-xs text-slate-500 mt-0.5">{label}</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{label}</p>
     </div>
   );
 }

@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Menu, Bell, Search, ChevronDown, LogOut, Settings, Building2 } from 'lucide-react';
+import { Menu, Bell, Search, ChevronDown, LogOut, Settings, Building2, Sun, Moon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/utils/cn';
 import alertService from '@/services/alertService';
 
 export default function Topbar({ onMenuToggle }: { onMenuToggle: () => void }) {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -40,39 +42,49 @@ export default function Topbar({ onMenuToggle }: { onMenuToggle: () => void }) {
   };
 
   return (
-    <header className="sticky top-0 z-30 h-16 bg-white/90 backdrop-blur border-b border-slate-200 flex items-center gap-3 px-4 sm:px-6">
+    <header className="sticky top-0 z-30 h-16 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 px-4 sm:px-6 transition-colors">
       {/* Mobile menu toggle */}
       <button
         onClick={onMenuToggle}
-        className="lg:hidden p-2 rounded-lg hover:bg-slate-100 transition"
+        className="lg:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
         aria-label="Toggle navigation"
       >
-        <Menu className="w-5 h-5 text-slate-600" />
+        <Menu className="w-5 h-5" />
       </button>
 
       {/* Business name + date */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-900 truncate">{user?.business_name || 'Acme Industries'}</p>
-        <p className="text-xs text-slate-500 hidden sm:block">{dateStr}</p>
+        <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{user?.business_name || 'Acme Industries'}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">{dateStr}</p>
       </div>
 
       {/* Search (desktop) */}
-      <div className="hidden md:flex items-center gap-2 bg-slate-100 rounded-lg px-3 py-2 w-64">
-        <Search className="w-4 h-4 text-slate-400" />
+      <div className="hidden md:flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-lg px-3 py-2 w-64 border border-transparent dark:border-slate-700">
+        <Search className="w-4 h-4 text-slate-400 dark:text-slate-500" />
         <input
           placeholder="Search…"
-          className="bg-transparent text-sm outline-none placeholder:text-slate-400 w-full"
+          className="bg-transparent text-sm outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-900 dark:text-slate-100 w-full"
         />
       </div>
+
+      {/* Theme toggle */}
+      <button
+        onClick={toggleTheme}
+        className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
+        title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        aria-label="Toggle theme"
+      >
+        {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-600" />}
+      </button>
 
       {/* Notifications */}
       <div className="relative" ref={notifRef}>
         <button
           onClick={() => setNotifOpen(!notifOpen)}
-          className="relative p-2 rounded-lg hover:bg-slate-100 transition"
+          className="relative p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
           aria-label="Notifications"
         >
-          <Bell className="w-5 h-5 text-slate-600" />
+          <Bell className="w-5 h-5" />
           {unreadCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
               {unreadCount}
@@ -81,9 +93,9 @@ export default function Topbar({ onMenuToggle }: { onMenuToggle: () => void }) {
         </button>
 
         {notifOpen && (
-          <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden animate-in">
-            <div className="p-3 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
+          <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden animate-in">
+            <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Notifications</h3>
             </div>
             <div className="max-h-80 overflow-y-auto">
               {alerts.length === 0 && <p className="p-4 text-sm text-slate-400 text-center">No notifications</p>}
@@ -92,7 +104,7 @@ export default function Topbar({ onMenuToggle }: { onMenuToggle: () => void }) {
                   key={alert.id}
                   to={alert.link}
                   onClick={() => setNotifOpen(false)}
-                  className="flex items-start gap-3 p-3 hover:bg-slate-50 transition border-b border-slate-50 last:border-0"
+                  className="flex items-start gap-3 p-3 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition border-b border-slate-50 dark:border-slate-800/60 last:border-0"
                 >
                   <span
                     className={cn(
@@ -105,10 +117,10 @@ export default function Topbar({ onMenuToggle }: { onMenuToggle: () => void }) {
                     )}
                   />
                   <div className="min-w-0">
-                    <p className={cn('text-sm', alert.read ? 'text-slate-500' : 'text-slate-900 font-medium')}>
+                    <p className={cn('text-sm', alert.read ? 'text-slate-500 dark:text-slate-400' : 'text-slate-900 dark:text-white font-medium')}>
                       {alert.title}
                     </p>
-                    <p className="text-xs text-slate-400 truncate">{alert.description}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{alert.description}</p>
                   </div>
                 </Link>
               ))}
@@ -121,28 +133,28 @@ export default function Topbar({ onMenuToggle }: { onMenuToggle: () => void }) {
       <div className="relative" ref={menuRef}>
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-100 transition"
+          className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
         >
           <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold">
             {user?.owner_name?.charAt(0) || 'A'}
           </div>
-          <ChevronDown className="w-4 h-4 text-slate-500 hidden sm:block" />
+          <ChevronDown className="w-4 h-4 text-slate-500 dark:text-slate-400 hidden sm:block" />
         </button>
 
         {menuOpen && (
-          <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden animate-in">
-            <div className="p-3 border-b border-slate-100">
-              <p className="text-sm font-semibold text-slate-900">{user?.owner_name || 'Owner'}</p>
-              <p className="text-xs text-slate-500 truncate">{user?.email || 'owner@acme.com'}</p>
+          <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden animate-in">
+            <div className="p-3 border-b border-slate-100 dark:border-slate-800">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">{user?.owner_name || 'Owner'}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user?.email || 'owner@acme.com'}</p>
             </div>
             <div className="p-1">
-              <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 rounded-lg transition">
+              <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition">
                 <Building2 className="w-4 h-4" /> Business Profile
               </Link>
-              <Link to="/settings" onClick={() => setMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 rounded-lg transition">
+              <Link to="/settings" onClick={() => setMenuOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition">
                 <Settings className="w-4 h-4" /> Settings
               </Link>
-              <button onClick={handleLogout} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition">
+              <button onClick={handleLogout} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition">
                 <LogOut className="w-4 h-4" /> Logout
               </button>
             </div>

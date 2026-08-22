@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Bell, Globe, Palette, Save } from 'lucide-react';
 import { Card, PageHeader } from '@/components/ui';
+import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/utils/cn';
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -11,7 +12,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       aria-checked={checked}
       className={cn(
         'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400',
-        checked ? 'bg-blue-600' : 'bg-slate-300'
+        checked ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
       )}
     >
       <span
@@ -25,22 +26,38 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 }
 
 export default function Settings() {
+  const { theme, setTheme } = useTheme();
+
   const [settings, setSettings] = useState({
     emailNotifications: true,
     smsAlerts: false,
     riskAlerts: true,
     weeklyDigest: true,
-    theme: 'light',
+    theme: theme || 'light',
     currency: 'INR',
     timezone: 'Asia/Kolkata',
     language: 'English',
   });
   const [saved, setSaved] = useState(false);
 
+  useEffect(() => {
+    setSettings((s) => ({ ...s, theme }));
+  }, [theme]);
+
   const toggle = (key: string) =>
     setSettings((s) => ({ ...s, [key]: !(s as any)[key] }));
 
-  const update = (key: string, value: string) => setSettings((s) => ({ ...s, [key]: value }));
+  const update = (key: string, value: string) => {
+    setSettings((s) => ({ ...s, [key]: value }));
+    if (key === 'theme' && (value === 'light' || value === 'dark')) {
+      setTheme(value);
+    }
+  };
+
+  const handleThemeChange = (newTheme: 'light' | 'dark') => {
+    setTheme(newTheme);
+    setSettings((s) => ({ ...s, theme: newTheme }));
+  };
 
   const save = () => {
     setSaved(true);
@@ -53,8 +70,8 @@ export default function Settings() {
 
       {/* Notifications */}
       <Card className="p-6">
-        <h3 className="text-base font-semibold text-slate-900 mb-5 flex items-center gap-2">
-          <Bell className="w-5 h-5 text-blue-600" /> Notifications
+        <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-5 flex items-center gap-2">
+          <Bell className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Notifications
         </h3>
         <div className="space-y-4">
           <SettingRow label="Email notifications" desc="Receive important updates via email">
@@ -63,7 +80,7 @@ export default function Settings() {
           <SettingRow label="Risk alerts" desc="Alert me when financial risks change">
             <Toggle checked={settings.riskAlerts} onChange={() => toggle('riskAlerts')} />
           </SettingRow>
-          <SettingRow label="Weekly digest" desc="Get a weekly financial summary">
+          <SettingRow label="Weekly digest" desc="Get a weekly financial report & recommendations">
             <Toggle checked={settings.weeklyDigest} onChange={() => toggle('weeklyDigest')} />
           </SettingRow>
           <SettingRow label="SMS alerts" desc="Urgent alerts via SMS (carrier charges may apply)">
@@ -74,36 +91,62 @@ export default function Settings() {
 
       {/* Preferences */}
       <Card className="p-6">
-        <h3 className="text-base font-semibold text-slate-900 mb-5 flex items-center gap-2">
-          <Globe className="w-5 h-5 text-blue-600" /> Preferences
+        <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-5 flex items-center gap-2">
+          <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Preferences
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <label className="text-sm font-medium text-slate-600 block mb-1.5">Currency</label>
-            <select value={settings.currency} onChange={(e) => update('currency', e.target.value)} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400">
-              <option>INR</option><option>USD</option><option>EUR</option><option>GBP</option>
+            <label className="text-sm font-medium text-slate-600 dark:text-slate-300 block mb-1.5">Currency</label>
+            <select
+              value={settings.currency}
+              onChange={(e) => update('currency', e.target.value)}
+              className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-blue-400"
+            >
+              <option>INR</option>
+              <option>USD</option>
+              <option>EUR</option>
+              <option>GBP</option>
             </select>
           </div>
           <div>
-            <label className="text-sm font-medium text-slate-600 block mb-1.5">Timezone</label>
-            <select value={settings.timezone} onChange={(e) => update('timezone', e.target.value)} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400">
-              <option>Asia/Kolkata</option><option>Asia/Dubai</option><option>UTC</option>
+            <label className="text-sm font-medium text-slate-600 dark:text-slate-300 block mb-1.5">Timezone</label>
+            <select
+              value={settings.timezone}
+              onChange={(e) => update('timezone', e.target.value)}
+              className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-blue-400"
+            >
+              <option>Asia/Kolkata</option>
+              <option>Asia/Dubai</option>
+              <option>UTC</option>
             </select>
           </div>
           <div>
-            <label className="text-sm font-medium text-slate-600 block mb-1.5">Language</label>
-            <select value={settings.language} onChange={(e) => update('language', e.target.value)} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400">
-              <option>English</option><option>Hindi</option>
+            <label className="text-sm font-medium text-slate-600 dark:text-slate-300 block mb-1.5">Language</label>
+            <select
+              value={settings.language}
+              onChange={(e) => update('language', e.target.value)}
+              className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-blue-400"
+            >
+              <option>English</option>
+              <option>Hindi</option>
             </select>
           </div>
           <div>
-            <label className="text-sm font-medium text-slate-600 block mb-1.5 flex items-center gap-2"><Palette className="w-4 h-4" /> Theme</label>
+            <label className="text-sm font-medium text-slate-600 dark:text-slate-300 block mb-1.5 flex items-center gap-2">
+              <Palette className="w-4 h-4" /> Theme
+            </label>
             <div className="flex gap-2">
-              {['light', 'dark'].map((t) => (
+              {(['light', 'dark'] as const).map((t) => (
                 <button
                   key={t}
-                  onClick={() => update('theme', t)}
-                  className={cn('px-4 py-2.5 rounded-lg text-sm font-medium capitalize transition', settings.theme === t ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200')}
+                  type="button"
+                  onClick={() => handleThemeChange(t)}
+                  className={cn(
+                    'px-4 py-2.5 rounded-lg text-sm font-medium capitalize transition cursor-pointer',
+                    theme === t
+                      ? 'bg-blue-600 text-white shadow-sm shadow-blue-200 dark:shadow-none font-semibold'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  )}
                 >
                   {t}
                 </button>
@@ -114,10 +157,10 @@ export default function Settings() {
       </Card>
 
       <div className="flex items-center gap-3">
-        <button onClick={save} className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition">
+        <button onClick={save} className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition cursor-pointer">
           <Save className="w-4 h-4" /> Save Settings
         </button>
-        {saved && <span className="text-sm text-green-600 animate-in">✓ Settings saved</span>}
+        {saved && <span className="text-sm text-green-600 dark:text-green-400 animate-in">✓ Settings saved</span>}
       </div>
     </div>
   );
@@ -125,10 +168,10 @@ export default function Settings() {
 
 function SettingRow({ label, desc, children }: { label: string; desc: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-4 py-2">
+    <div className="flex items-center justify-between gap-4 py-2 border-b border-slate-50 dark:border-slate-800/60 last:border-0">
       <div>
-        <p className="text-sm font-medium text-slate-800">{label}</p>
-        <p className="text-xs text-slate-400">{desc}</p>
+        <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{label}</p>
+        <p className="text-xs text-slate-400 dark:text-slate-500">{desc}</p>
       </div>
       {children}
     </div>
