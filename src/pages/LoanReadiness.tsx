@@ -12,9 +12,17 @@ export default function LoanReadiness() {
     queryFn: () => loanReadinessService.getLoanReadiness(),
   });
 
+  const noData = lr?.status === 'no_data';
   const score = lr?.score ?? 0;
-  const color = score >= 75 ? '#10b981' : score >= 55 ? '#f59e0b' : '#ef4444';
-  const factorColor = (s: number) => (s >= 75 ? '#10b981' : s >= 55 ? '#f59e0b' : '#ef4444');
+  const color = noData
+    ? '#94a3b8'
+    : score >= 75
+      ? '#10b981'
+      : score >= 55
+        ? '#f59e0b'
+        : '#ef4444';
+  const factorColor = (s: number) =>
+    noData ? '#94a3b8' : s >= 75 ? '#10b981' : s >= 55 ? '#f59e0b' : '#ef4444';
 
   return (
     <div className="space-y-6">
@@ -35,9 +43,11 @@ export default function LoanReadiness() {
               {isLoading ? (
                 <div className="h-[170px] flex items-center justify-center text-slate-400 dark:text-slate-500">Loading…</div>
               ) : (
-                <ScoreRing score={score} size={170} stroke={13} label={lr?.label ?? ''} color={color} />
+                <ScoreRing score={score} size={170} stroke={13} label={noData ? 'No Data Yet' : lr?.label ?? ''} color={color} />
               )}
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">Based on your real financial data</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">
+                {noData ? 'Upload your ledgers to receive a readiness score' : 'Based on your real financial data'}
+              </p>
             </Card>
 
             <Card className="p-6 lg:col-span-2" hover>

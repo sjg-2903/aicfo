@@ -9,7 +9,11 @@ from typing import Any, Optional
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.analytics.metrics import compute_financial_metrics, compute_monthly_series
+from app.analytics.metrics import (
+    compute_financial_metrics,
+    compute_monthly_series,
+    has_financial_data,
+)
 from app.analytics.scoring import (
     clamp,
     coefficient_of_variation,
@@ -48,6 +52,35 @@ async def compute_health_score(
     db: AsyncIOMotorDatabase, business_id: Any, now: Optional[datetime] = None,
 ) -> dict:
     now = now or utcnow()
+
+    # A brand-new account has no financial data yet — report a neutral zero
+    # state rather than a misleading default score.
+    if not await has_financial_data(db, business_id):
+        return {
+            "score": 0.0,
+            "status": "no_data",
+            "label": "No Data",
+            "factors": [
+                {"name": name, "score": 0.0, "weight": weight, "contribution": 0.0}
+                for name, weight in FACTOR_WEIGHTS
+            ],
+            "strengths": [],
+            "weaknesses": [],
+            "interpretation": (
+                "No financial data is available yet. Upload your bank statements "
+                "or ledgers to receive a financial health score."
+            ),
+            "warnings": ["No financial data available"],
+            "metrics": {
+                "margin": 0.0,
+                "expense_ratio": 0.0,
+                "runway_months": 0.0,
+                "debt_to_revenue": 0.0,
+                "emi_to_revenue": 0.0,
+            },
+            "generated_at": now.isoformat(),
+        }
+
     metrics = await compute_financial_metrics(db, business_id, now)
     monthly = await compute_monthly_series(db, business_id, months=6, now=now)
     gst_records = await db[COLLECTIONS["gst_records"]].find(

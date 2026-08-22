@@ -51,8 +51,15 @@ export default function RiskAnalysis() {
     low: risks.filter((r) => r.severity === 'low').length,
   };
 
+  const noData = assessment?.level === 'no_data';
   const score = assessment?.score ?? 0;
-  const ringColor = score >= 75 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
+  const ringColor = noData
+    ? '#94a3b8'
+    : score >= 75
+      ? '#10b981'
+      : score >= 50
+        ? '#f59e0b'
+        : '#ef4444';
   const levelLabel = (assessment?.level || 'unknown').replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
   return (
@@ -75,7 +82,7 @@ export default function RiskAnalysis() {
               {isLoading ? (
                 <div className="h-[160px] flex items-center justify-center text-slate-400 dark:text-slate-500">Loading…</div>
               ) : (
-                <ScoreRing score={score} size={160} stroke={12} label={`${levelLabel} Risk`} color={ringColor} />
+                <ScoreRing score={score} size={160} stroke={12} label={noData ? 'No Data Yet' : `${levelLabel} Risk`} color={ringColor} />
               )}
             </Card>
 
@@ -112,8 +119,12 @@ export default function RiskAnalysis() {
 
           {filtered.length === 0 && !isLoading && (
             <Card className="p-12 text-center">
-              <ShieldAlert className="w-10 h-10 text-green-500 mx-auto mb-3" />
-              <p className="text-slate-500 dark:text-slate-400">No risks match your filters — you're in good shape.</p>
+              <ShieldAlert className={`w-10 h-10 mx-auto mb-3 ${noData ? 'text-slate-400' : 'text-green-500'}`} />
+              <p className="text-slate-500 dark:text-slate-400">
+                {noData
+                  ? 'No financial data available yet. Upload your ledgers to start risk analysis.'
+                  : "No risks match your filters — you're in good shape."}
+              </p>
             </Card>
           )}
 

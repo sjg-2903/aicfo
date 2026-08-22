@@ -13,8 +13,15 @@ export default function FinancialHealth() {
     queryFn: () => dashboardService.getFinancialHealth(),
   });
 
+  const noData = health?.status === 'no_data';
   const score = health?.score ?? 0;
-  const color = score >= 75 ? '#10b981' : score >= 55 ? '#f59e0b' : '#ef4444';
+  const color = noData
+    ? '#94a3b8'
+    : score >= 75
+      ? '#10b981'
+      : score >= 55
+        ? '#f59e0b'
+        : '#ef4444';
 
   return (
     <div className="space-y-6">
@@ -36,7 +43,7 @@ export default function FinancialHealth() {
               {isLoading ? (
                 <div className="h-[170px] flex items-center justify-center text-slate-400 dark:text-slate-500">Loading…</div>
               ) : (
-                <ScoreRing score={score} size={170} stroke={13} label={health?.label ?? ''} color={color} />
+                <ScoreRing score={score} size={170} stroke={13} label={noData ? 'No Data Yet' : health?.label ?? ''} color={color} />
               )}
             </Card>
 

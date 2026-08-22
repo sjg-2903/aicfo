@@ -5,7 +5,11 @@ from typing import Any, Optional
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.analytics.metrics import compute_financial_metrics, compute_monthly_series
+from app.analytics.metrics import (
+    compute_financial_metrics,
+    compute_monthly_series,
+    has_financial_data,
+)
 from app.analytics.scoring import (
     clamp,
     coefficient_of_variation,
@@ -48,6 +52,35 @@ async def compute_loan_readiness(
     db: AsyncIOMotorDatabase, business_id: Any, now: Optional[datetime] = None,
 ) -> dict:
     now = now or utcnow()
+
+    # A brand-new account has no financial data yet — report a neutral zero
+    # state rather than a misleading default readiness score.
+    if not await has_financial_data(db, business_id):
+        return {
+            "readiness_score": 0.0,
+            "status": "no_data",
+            "label": "No Data",
+            "factors": [
+                {
+                    "name": name,
+                    "score": 0.0,
+                    "weight": weight,
+                    "contribution": 0.0,
+                    "status": "no_data",
+                    "recommendation": FACTOR_RECOMMENDATIONS[name],
+                }
+                for name, weight in LOAN_READINESS_WEIGHTS
+            ],
+            "overall_recommendation": (
+                "No financial data is available yet. Upload your bank statements "
+                "or ledgers to receive a loan readiness assessment."
+            ),
+            "improvement_suggestions": [
+                "Upload your bank statements and ledgers to begin the assessment."
+            ],
+            "generated_at": now,
+        }
+
     metrics = await compute_financial_metrics(db, business_id, now)
     monthly = await compute_monthly_series(db, business_id, months=6, now=now)
     gst_records = await db[COLLECTIONS["gst_records"]].find(
