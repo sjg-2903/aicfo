@@ -526,7 +526,6 @@ export default function Landing() {
             <motion.span whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
               <Link
                 to="/dashboard"
-                onClick={explore}
                 className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-3.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-semibold transition"
               >
                 Explore the Demo <ArrowRight className="w-4 h-4" />
