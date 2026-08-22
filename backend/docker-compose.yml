@@ -25,15 +25,16 @@ services:
       JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-me}
       ENVIRONMENT: development
       CORS_ORIGINS: http://localhost:5173,http://localhost:3000
-      # AWS Bedrock narrative layer (optional — see AWS_BEDROCK_SETUP.md).
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
-      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
-      AWS_PROFILE: ${AWS_PROFILE:-}
-      AWS_REGION: ${AWS_REGION:-us-east-1}
-      BEDROCK_MODEL_ID: ${BEDROCK_MODEL_ID:-anthropic.claude-sonnet-4-20250514-v1:0}
-      BEDROCK_TIMEOUT_SECONDS: ${BEDROCK_TIMEOUT_SECONDS:-90}
-      BEDROCK_MAX_RETRIES: ${BEDROCK_MAX_RETRIES:-2}
+      # Optional OpenAI / Google Gemini narrative layer (see AI_PROVIDER_SETUP.md).
+      LLM_PROVIDER: ${LLM_PROVIDER:-auto}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      GEMINI_BASE_URL: ${GEMINI_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-90}
+      LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-2}
       DEMO_MODE: ${DEMO_MODE:-false}
     ports:
       - "8000:8000"

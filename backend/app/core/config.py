@@ -32,22 +32,21 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # ── AWS Bedrock (optional narrative layer) ─────────────────────────────
-    # Bedrock is intentionally used only to explain / summarize trusted backend
-    # output and to answer chat requests. Financial calculations, forecasts,
-    # risk scoring and deterministic recommendation rules remain in Python.
-    # Credentials follow boto3's standard chain: explicit keys below, a named
-    # AWS_PROFILE, or an attached IAM role. When no credentials resolve,
-    # callers fall back to deterministic explanations generated from the same
-    # calculated data. See AWS_BEDROCK_SETUP.md for the full walkthrough.
-    AWS_ACCESS_KEY_ID: Optional[str] = None
-    AWS_SECRET_ACCESS_KEY: Optional[str] = None
-    AWS_SESSION_TOKEN: Optional[str] = None  # only for temporary credentials (SSO / assumed roles)
-    AWS_PROFILE: Optional[str] = None  # use a profile from ~/.aws/credentials instead of keys
-    AWS_REGION: str = "us-east-1"
-    BEDROCK_MODEL_ID: str = "anthropic.claude-sonnet-4-20250514-v1:0"
-    BEDROCK_TIMEOUT_SECONDS: float = Field(default=90.0, ge=5.0, le=3600.0)
-    BEDROCK_MAX_RETRIES: int = Field(default=2, ge=0, le=5)
+    # ── AI narrative provider (optional) ──────────────────────────────────
+    # OpenAI or Google Gemini is used only to explain / summarize trusted
+    # backend output and answer chat requests. Financial calculations,
+    # forecasts, risk scores and deterministic recommendation rules stay in
+    # Python. With no configured API key, callers use deterministic output.
+    # See AI_PROVIDER_SETUP.md for setup and data-handling guidance.
+    LLM_PROVIDER: str = "auto"  # auto (OpenAI first), openai, or gemini
+    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_MODEL: str = "gpt-4.1-mini"
+    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
+    GEMINI_API_KEY: Optional[str] = None
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta"
+    LLM_TIMEOUT_SECONDS: float = Field(default=90.0, ge=5.0, le=3600.0)
+    LLM_MAX_RETRIES: int = Field(default=2, ge=0, le=5)
 
     # ── CORS / security ────────────────────────────────────────────────────
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"

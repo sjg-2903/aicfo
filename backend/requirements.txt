@@ -13,10 +13,8 @@ python-dateutil>=2.9
 pandas>=2.2
 numpy>=1.26
 scikit-learn>=1.4
-# Async HTTP client used by the API test-suite (ASGI transport).
+# Async HTTP client used by provider APIs and the API test-suite (ASGI transport).
 httpx>=0.27
-# AWS SDK for the Amazon Bedrock Converse API integration (AI CFO narratives).
-boto3>=1.34
 
 # File import / document processing / PDF reports
 openpyxl>=3.1        # Excel (.xlsx) imports

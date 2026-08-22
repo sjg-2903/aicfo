@@ -1,30 +1,17 @@
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, Brain, Sparkles } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Brain } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { getErrorMessage } from '@/lib/axios';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, loginAsDemo } = useAuth();
+  const { login } = useAuth();
   const { addToast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
-
-  const handleDemoLogin = async () => {
-    setDemoLoading(true);
-    try {
-      await loginAsDemo();
-      navigate('/dashboard');
-    } catch (error) {
-      addToast(getErrorMessage(error, 'Demo login failed — is the backend running and demo data seeded?'), 'error');
-    } finally {
-      setDemoLoading(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,24 +95,6 @@ export default function Login() {
               {loading ? 'Logging in...' : 'Login'}
             </button>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-slate-600" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-slate-800 px-3 text-slate-400">or</span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleDemoLogin}
-              disabled={demoLoading}
-              className="w-full bg-slate-700 hover:bg-slate-600 disabled:bg-slate-600 text-white font-semibold py-2 rounded-lg transition flex items-center justify-center gap-2 border border-slate-500"
-            >
-              <Sparkles className="w-4 h-4" />
-              {demoLoading ? 'Entering…' : 'Explore Demo (No login needed)'}
-            </button>
           </form>
 
           <p className="text-center text-slate-400 mt-6">

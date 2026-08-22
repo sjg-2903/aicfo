@@ -44,7 +44,7 @@ async def summary_bullets(
 
     Both the Recommendations page and Dashboard consume this same endpoint and
     rendering component. Deterministic recommendation rules remain the source
-    of truth; Bedrock may only improve the natural-language summary when it is
+    of truth; the configured AI provider may only improve the natural-language summary when it is
     configured and returns a valid response.
     """
     result = await recommendation_service.generate_summary_bullets(db, business["_id"])
@@ -60,7 +60,7 @@ async def generate(
 ):
     # The Generate button deliberately sends an explicit natural-language
     # instruction. The service adds trusted finance analysis and the display
-    # schema, then falls back to the deterministic engine if Bedrock is not
+    # schema, then falls back to the deterministic engine if an AI provider is not
     # configured or returns malformed data.
     recs, stats = await recommendation_service.generate_with_stats(
         db, business["_id"], prompt=payload.prompt

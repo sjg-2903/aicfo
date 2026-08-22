@@ -73,22 +73,28 @@ CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 ENVIRONMENT=development
 ```
 
-Leave the `AWS_*` variables empty unless you want AWS Bedrock-powered
-explanations in the AI CFO chat. To enable it, follow
-[AWS_BEDROCK_SETUP.md](AWS_BEDROCK_SETUP.md) (AWS account → enable model
-access → create an IAM access key), then add the following to `backend/.env`:
+Leave `OPENAI_API_KEY` and `GEMINI_API_KEY` empty to use deterministic
+explanations. To enable an AI narrative provider, follow
+[AI_PROVIDER_SETUP.md](AI_PROVIDER_SETUP.md), then add one of these to
+`backend/.env`:
 
 ```env
-AWS_ACCESS_KEY_ID=your_access_key_id
-AWS_SECRET_ACCESS_KEY=your_secret_access_key
-AWS_REGION=us-east-1
-BEDROCK_MODEL_ID=anthropic.claude-sonnet-4-20250514-v1:0
+# OpenAI
+LLM_PROVIDER=openai
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-4.1-mini
 ```
 
-Bedrock is used only for explanations, summaries, insights and chat responses;
-financial calculations and recommendation rules always remain deterministic.
-Without credentials, the backend uses deterministic explanations built from
-your own data.
+```env
+# Google Gemini
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+Providers are used only for explanations, summaries, insights, chat responses,
+and optional image understanding. Financial calculations and recommendation
+rules remain deterministic. API keys stay in the backend.
 
 ---
 

@@ -17,7 +17,6 @@ import {
   Play,
   ChevronDown,
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
 
 const APP_NAME = 'AI CFO';
 
@@ -65,19 +64,6 @@ function AnimatedNumber({ value, suffix = '' }: { value: number; suffix?: string
 }
 
 export default function Landing() {
-  const { loginAsDemo, isAuthenticated } = useAuth();
-
-  const explore = async () => {
-    if (!isAuthenticated) {
-      try {
-        await loginAsDemo();
-      } catch {
-        // If demo login fails (e.g. backend not seeded), the protected route
-        // will redirect to /login where a clear message is shown.
-      }
-    }
-  };
-
   return (
     <div className="min-h-screen bg-white text-slate-900 overflow-x-hidden">
       {/* NAV */}
@@ -205,11 +191,10 @@ export default function Landing() {
             </motion.span>
             <motion.span whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
               <Link
-                to="/dashboard"
-                onClick={explore}
+                to="/login"
                 className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-3.5 bg-white/70 backdrop-blur hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl font-semibold transition shadow-sm"
               >
-                <Play className="w-4 h-4" /> Explore AI CFO
+                <Play className="w-4 h-4" /> Sign in to explore
               </Link>
             </motion.span>
           </motion.div>

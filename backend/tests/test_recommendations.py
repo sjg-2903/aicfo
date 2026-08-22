@@ -45,7 +45,7 @@ async def test_generate_sends_whole_finance_prompt_to_ai(client, monkeypatch):
         )
 
     monkeypatch.setattr(recommendation_service.llm, "is_available", lambda: True)
-    monkeypatch.setattr(recommendation_service.llm, "active_provider", lambda: "bedrock")
+    monkeypatch.setattr(recommendation_service.llm, "active_provider", lambda: "openai")
     monkeypatch.setattr(recommendation_service.llm, "complete", fake_complete)
 
     response = await client.post("/api/recommendations/generate", json={}, headers=auth(token))

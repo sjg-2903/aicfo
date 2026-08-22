@@ -12,7 +12,7 @@ async def test_recommendation_summary_empty_data(client):
     response = await client.get("/api/recommendations/summary", headers=auth(token))
     assert response.status_code == 200
     body = response.json()["data"]
-    assert body["engine"] in ("deterministic", "bedrock")
+    assert body["engine"] in ("deterministic", "openai", "gemini")
     assert isinstance(body["bullets"], list)
 
 
