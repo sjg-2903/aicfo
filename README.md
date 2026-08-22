@@ -409,35 +409,40 @@ All components are highly configurable and support theming through props.
 
 ## Deployment
 
-### AWS S3 + CloudFront Deployment
+### Production on AWS (recommended): one EC2 instance + Docker Compose
 
-1. **Build the application**
+The full stack — React frontend (Caddy + SPA), FastAPI backend and MongoDB —
+deploys to a single EC2 instance via Docker Compose. Terraform provisions the
+VPC/instance/security groups, generates secrets into AWS SSM Parameter Store,
+and cloud-init boots everything automatically. CI/CD (GitHub Actions) rebuilds
+and redeploys on every push to `main`.
+
+- Full guide: **[DEPLOYMENT.md](DEPLOYMENT.md)**
+- Infrastructure: `infra/terraform/`
+- Production stack: `docker-compose.prod.yml` + `deploy/`
+- CI/CD: `ci/deploy.yml` (copy to `.github/workflows/` to activate — see
+  DEPLOYMENT.md)
+
 ```bash
-npm run build
+cd infra/terraform
+cp terraform.tfvars.example terraform.tfvars   # edit region / domain / etc.
+terraform init && terraform apply
+terraform output public_url                     # ~5-10 min on first deploy
 ```
 
-2. **Upload to S3**
+### Alternative: frontend-only static hosting (S3 + CloudFront)
+
+If you only need the React app served (API deployed separately):
+
 ```bash
+npm run build
 aws s3 sync dist/ s3://your-bucket-name --delete
 ```
 
-3. **Configure CloudFront**
-- Set S3 bucket as origin
-- Configure cache policies
-- Set index.html as default root object
-- Enable gzip compression
-
-4. **SPA Routing Configuration**
-```json
-// CloudFront error responses
-{
-  "ErrorCode": 404,
-  "ResponsePagePath": "/index.html",
-  "ResponseCode": 200
-}
-```
-
-This ensures all 404s are redirected to index.html for proper React Router handling.
+Create a CloudFront distribution with the S3 bucket as origin, `index.html`
+as the default root object, origin access control (OAC), and a 404 →
+`/index.html` (200) error response for React Router. See the appendix in
+[DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Testing
 

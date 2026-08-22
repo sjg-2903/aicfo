@@ -1,0 +1,145 @@
+# ─────────────────────────────────────────────────────────────────────────
+# AI CFO — production stack: Caddy (SPA + reverse proxy) + FastAPI + MongoDB.
+#
+# Variables are interpolated from the repository-root `.env` file
+# (see deploy/.env.production.example). The Terraform bootstrap writes that
+# file automatically; for deployments done by hand, copy the example and edit.
+#
+# Only Caddy publishes host ports (80/443). MongoDB and FastAPI are reachable
+# exclusively from inside the Docker network.
+# ─────────────────────────────────────────────────────────────────────────
+
+name: aicfo
+
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: aicfo-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      # Used by deploy/mongo-init.js to create the least-privileged app user.
+      MONGO_APP_USERNAME: ${MONGO_APP_USERNAME}
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+      - ./deploy/mongo-init.js:/docker-entrypoint-initdb.d/10-create-app-user.js:ro
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          mongosh --quiet --username "$$MONGO_INITDB_ROOT_USERNAME"
+          --password "$$MONGO_INITDB_ROOT_PASSWORD"
+          --authenticationDatabase admin
+          --eval 'db.runCommand({ping:1}).ok' | grep -q 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - aicfo
+
+  backend:
+    build: ./backend
+    image: aicfo-backend:latest
+    container_name: aicfo-backend
+    restart: unless-stopped
+    environment:
+      # App user is created in the `aicfo` database by mongo-init.js, so the
+      # authentication source is `aicfo` (alphanumeric passwords: no encoding).
+      MONGODB_URI: mongodb://${MONGO_APP_USERNAME}:${MONGO_APP_PASSWORD}@mongo:27017/aicfo?authSource=aicfo
+      MONGODB_DB_NAME: aicfo
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      ENVIRONMENT: production
+      DEBUG: "false"
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      API_V1_PREFIX: /api
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      DEMO_MODE: "false"
+      # Optional AI narrative providers (deterministic fallback if unset).
+      LLM_PROVIDER: ${LLM_PROVIDER:-auto}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.6-flash}
+      GEMINI_BASE_URL: ${GEMINI_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-90}
+      LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-2}
+      # Guard-rails.
+      MAX_IMPORT_ROWS: ${MAX_IMPORT_ROWS:-10000}
+      FORECAST_MIN_HISTORY_DAYS: ${FORECAST_MIN_HISTORY_DAYS:-14}
+      FORECAST_HORIZON_DAYS: ${FORECAST_HORIZON_DAYS:-30}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request,sys;
+          sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health', timeout=5).status==200 else 1)
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - aicfo
+
+  caddy:
+    build: .
+    image: aicfo-frontend:latest
+    container_name: aicfo-caddy
+    restart: unless-stopped
+    environment:
+      # Empty => plain HTTP on :80 (public-IP access). Set a domain to enable
+      # automatic HTTPS via Let's Encrypt.
+      DOMAIN: ${DOMAIN:-}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - aicfo
+
+volumes:
+  mongo_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  aicfo:
+    driver: bridge
