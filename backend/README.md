@@ -163,7 +163,7 @@ automatically at startup (`app/db/indexes.py`).
 | `OPENAI_MODEL` | OpenAI chat/vision model | `gpt-4.1-mini` |
 | `OPENAI_BASE_URL` | OpenAI API base URL | `https://api.openai.com/v1` |
 | `GEMINI_API_KEY` | Backend-only Google Gemini API key | *(empty)* |
-| `GEMINI_MODEL` | Gemini chat/vision model | `gemini-2.5-flash` |
+| `GEMINI_MODEL` | Gemini chat/vision model | `gemini-3.6-flash` |
 | `GEMINI_BASE_URL` | Gemini API base URL | Google Generative Language v1beta |
 | `LLM_TIMEOUT_SECONDS` | Bounded timeout for one provider request | `90` |
 | `LLM_MAX_RETRIES` | Retries for transient provider failures (0–5) | `2` |
@@ -307,7 +307,7 @@ A minimal Gemini configuration is:
 ```env
 LLM_PROVIDER=gemini
 GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.6-flash
 ```
 
 Restart the API after changing configuration. Calls happen server-side and API

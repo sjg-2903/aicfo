@@ -89,7 +89,7 @@ OPENAI_MODEL=gpt-4.1-mini
 # Google Gemini
 LLM_PROVIDER=gemini
 GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.6-flash
 ```
 
 Providers are used only for explanations, summaries, insights, chat responses,

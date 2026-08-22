@@ -534,7 +534,7 @@ export const SEGMENT_GUIDES: Record<SegmentId, SegmentGuideConfig> = {
         stepNumber: '01',
         title: 'Select AI Engine (Google Gemini / OpenAI)',
         description:
-          'Google Gemini 2.5 Flash is the primary high-speed intelligence engine, with OpenAI GPT-4.1 Mini as intelligent failover. Both use verified ledger context.',
+          'Google Gemini 3.6 Flash is the primary high-speed intelligence engine, with OpenAI GPT-4.1 Mini as intelligent failover. Both use verified ledger context.',
         proTip: 'AI responses are 100% grounded in your actual MongoDB financial records—no hallucinated numbers.',
       },
       {

@@ -94,7 +94,7 @@ export default function Settings() {
           >
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-blue-600" /> Google Gemini 2.5 Flash
+                <Sparkles className="w-4 h-4 text-blue-600" /> Google Gemini 3.6 Flash
               </span>
               {settings.aiEngine === 'gemini' && (
                 <span className="p-0.5 rounded-full bg-blue-600 text-white">

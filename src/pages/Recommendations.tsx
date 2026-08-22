@@ -244,7 +244,7 @@ export default function Recommendations() {
               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 {currentEngine === 'gemini'
-                  ? 'Google Gemini 2.5 Flash (Primary)'
+                  ? 'Google Gemini 3.6 Flash (Primary)'
                   : currentEngine === 'openai'
                     ? 'OpenAI GPT-4.1 Mini'
                     : 'AI CFO Telemetry Engine'}
