@@ -4,9 +4,179 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI CFO - Finance Advisor For MSME</title>
+    <style>
+      /* Pre-React branded splash — visible from the very first paint until the
+         app bundle loads and React takes over (removed in main.tsx). */
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #0f172a 100%);
+        font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        transition: opacity 0.4s ease;
+      }
+      #app-splash.hide {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .splash-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 0 24px;
+      }
+      .splash-logo {
+        position: relative;
+        width: 72px;
+        height: 72px;
+        margin-bottom: 28px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 15px 45px rgba(59, 130, 246, 0.45);
+        animation: splash-pulse 2s ease-in-out infinite;
+      }
+      .splash-logo svg {
+        width: 38px;
+        height: 38px;
+        color: #fff;
+      }
+      .splash-ring {
+        position: absolute;
+        inset: -12px;
+        border-radius: 26px;
+        border: 2px dashed rgba(96, 165, 250, 0.45);
+        animation: splash-rotate 7s linear infinite;
+      }
+      .splash-title {
+        font-size: 32px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        background: linear-gradient(90deg, #ffffff, #bfdbfe);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .splash-tagline {
+        margin-top: 7px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: #93c5fd;
+      }
+      .splash-msg {
+        margin-top: 26px;
+        font-size: 13.5px;
+        color: #94a3b8;
+      }
+      .splash-msg::after {
+        content: '';
+        animation: splash-dots 1.2s steps(4, end) infinite;
+      }
+      .splash-bar {
+        position: relative;
+        margin-top: 16px;
+        width: 224px;
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.22);
+        overflow: hidden;
+      }
+      .splash-bar::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 34%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+        animation: splash-bar-slide 1.4s ease-in-out infinite;
+      }
+      @keyframes splash-rotate {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes splash-pulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+      }
+      @keyframes splash-dots {
+        0% {
+          content: '';
+        }
+        25% {
+          content: '.';
+        }
+        50% {
+          content: '..';
+        }
+        75% {
+          content: '...';
+        }
+      }
+      @keyframes splash-bar-slide {
+        0% {
+          transform: translateX(-110%);
+        }
+        100% {
+          transform: translateX(340%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .splash-logo,
+        .splash-ring,
+        .splash-bar::after,
+        .splash-msg::after {
+          animation: none;
+        }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <div id="app-splash" role="status" aria-live="polite" aria-label="AI CFO is loading">
+      <div class="splash-inner">
+        <div class="splash-logo">
+          <div class="splash-ring"></div>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 18V5" />
+            <path d="M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4" />
+            <path d="M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5" />
+            <path d="M17.997 5.125a4 4 0 0 1 2.526 5.77" />
+            <path d="M18 18a4 4 0 0 0 2-7.464" />
+            <path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517" />
+            <path d="M6 18a4 4 0 0 1-2-7.464" />
+            <path d="M6.003 5.125a4 4 0 0 0-2.526 5.77" />
+          </svg>
+        </div>
+        <div class="splash-title">AI CFO</div>
+        <div class="splash-tagline">Finance Advisor For MSME</div>
+        <div class="splash-msg">Loading</div>
+        <div class="splash-bar"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
