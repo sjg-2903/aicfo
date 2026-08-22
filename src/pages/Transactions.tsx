@@ -91,9 +91,9 @@ export default function Transactions() {
 
   const columns: Column<TxnRow>[] = [
     { key: 'date', header: 'Date', sortable: true },
-    { key: 'description', header: 'Description', render: (t) => <span className="font-medium text-slate-800">{t.description}</span> },
+    { key: 'description', header: 'Description', render: (t) => <span className="font-medium text-slate-800 dark:text-slate-100">{t.description}</span> },
     { key: 'category', header: 'Category' },
-    { key: 'paymentMethod', header: 'Method', render: (t) => <span className="text-slate-500">{t.paymentMethod}</span> },
+    { key: 'paymentMethod', header: 'Method', render: (t) => <span className="text-slate-500 dark:text-slate-400">{t.paymentMethod}</span> },
     { key: 'type', header: 'Type', render: (t) => <Pill value={t.type === 'income' ? 'good' : 'medium'} label={t.type} /> },
     {
       key: 'amount',
@@ -101,7 +101,7 @@ export default function Transactions() {
       sortable: true,
       align: 'right',
       render: (t) => (
-        <span className={`font-semibold ${t.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+        <span className={`font-semibold ${t.amount > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
           {t.amount > 0 ? '+' : ''}
           {CURRENCY(t.amount)}
         </span>
@@ -145,13 +145,13 @@ export default function Transactions() {
         subtitle="Track all money coming in and going out"
         actions={
           <>
-            <button onClick={exportCsv} className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium transition">
+            <button onClick={exportCsv} className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition cursor-pointer">
               <Download className="w-4 h-4" /> Export
             </button>
-            <button onClick={() => setShowUpload(true)} className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium transition">
+            <button onClick={() => setShowUpload(true)} className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition cursor-pointer">
               <Upload className="w-4 h-4" /> Upload
             </button>
-            <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition shadow-sm">
+            <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition shadow-sm cursor-pointer">
               <Plus className="w-4 h-4" /> Add Transaction
             </button>
           </>
@@ -167,9 +167,9 @@ export default function Transactions() {
 
       <Card>
         {/* Filter bar */}
-        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-3">
+        <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
             <input
               value={search}
               onChange={(e) => {
@@ -177,7 +177,7 @@ export default function Transactions() {
                 setPage(1);
               }}
               placeholder="Search transactions…"
-              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition"
+              className="w-full pl-9 pr-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/30 transition"
             />
           </div>
           <div className="flex gap-2">
@@ -188,7 +188,9 @@ export default function Transactions() {
                   setTypeFilter(t);
                   setPage(1);
                 }}
-                className={`px-3 py-2 rounded-lg text-sm font-medium capitalize transition ${typeFilter === t ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                className={`px-3 py-2 rounded-lg text-sm font-medium capitalize transition cursor-pointer ${
+                  typeFilter === t ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
               >
                 {t}
               </button>
@@ -283,10 +285,10 @@ function toPayload(v: FormValues): TransactionCreateRequest {
 }
 
 function StatsCard({ label, value, tone }: { label: string; value: number; tone: 'green' | 'red' | 'blue' }) {
-  const color = tone === 'green' ? 'text-green-600' : tone === 'red' ? 'text-red-600' : 'text-blue-600';
+  const color = tone === 'green' ? 'text-green-600 dark:text-green-400' : tone === 'red' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400';
   return (
     <Card className="p-4 hover">
-      <p className="text-xs text-slate-500 mb-1">{label}</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{label}</p>
       <p className={`text-lg font-bold ${color}`}>{CURRENCY(value)}</p>
     </Card>
   );

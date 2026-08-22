@@ -99,18 +99,18 @@ export default function Invoices() {
   const paidTotal = all.filter((i) => i.status === 'paid').reduce((s, i) => s + i.total, 0);
 
   const columns: Column<InvoiceRow>[] = [
-    { key: 'number', header: 'Invoice #', render: (i) => <span className="font-medium text-slate-800">{i.number}</span> },
-    { key: 'customer', header: 'Customer', render: (i) => <span className="font-medium text-slate-700">{i.customer}</span> },
+    { key: 'number', header: 'Invoice #', render: (i) => <span className="font-medium text-slate-800 dark:text-slate-100">{i.number}</span> },
+    { key: 'customer', header: 'Customer', render: (i) => <span className="font-medium text-slate-700 dark:text-slate-200">{i.customer}</span> },
     { key: 'date', header: 'Date', sortable: true },
     { key: 'dueDate', header: 'Due Date', sortable: true },
-    { key: 'total', header: 'Total', align: 'right', sortable: true, render: (i) => <span className="font-semibold text-slate-800">{CURRENCY(i.total)}</span> },
+    { key: 'total', header: 'Total', align: 'right', sortable: true, render: (i) => <span className="font-semibold text-slate-800 dark:text-slate-100">{CURRENCY(i.total)}</span> },
     {
       key: 'outstanding',
       header: 'Outstanding',
       align: 'right',
       render: (i) => {
         const out = i.total - i.paid;
-        return <span className={out > 0 ? 'font-semibold text-amber-600' : 'text-slate-400'}>{CURRENCY(Math.max(0, out))}</span>;
+        return <span className={out > 0 ? 'font-semibold text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'}>{CURRENCY(Math.max(0, out))}</span>;
       },
     },
     { key: 'status', header: 'Status', render: (i) => <Pill value={i.status} /> },
@@ -128,7 +128,7 @@ export default function Invoices() {
             <button
               type="button"
               onClick={() => markPaidMutation.mutate({ id: i.id, total: i.total })}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-green-600 hover:bg-green-50 transition"
+              className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/40 transition cursor-pointer"
               title="Mark as paid"
               aria-label="Mark as paid"
             >
@@ -150,10 +150,10 @@ export default function Invoices() {
         subtitle="Manage invoices and track payments"
         actions={
           <>
-            <button onClick={() => setShowUpload(true)} className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium transition">
+            <button onClick={() => setShowUpload(true)} className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition cursor-pointer">
               <Upload className="w-4 h-4" /> Upload
             </button>
-            <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition shadow-sm">
+            <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition shadow-sm cursor-pointer">
               <Plus className="w-4 h-4" /> New Invoice
             </button>
           </>
@@ -161,15 +161,15 @@ export default function Invoices() {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Stat label="Total Outstanding" value={outstandingTotal} tone="text-blue-600" />
-        <Stat label="Overdue Amount" value={overdueTotal} tone="text-red-600" />
-        <Stat label="Paid (all time)" value={paidTotal} tone="text-green-600" />
+        <Stat label="Total Outstanding" value={outstandingTotal} tone="text-blue-600 dark:text-blue-400" />
+        <Stat label="Overdue Amount" value={overdueTotal} tone="text-red-600 dark:text-red-400" />
+        <Stat label="Paid (all time)" value={paidTotal} tone="text-green-600 dark:text-green-400" />
       </div>
 
       <Card>
-        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-3">
+        <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
             <input
               value={search}
               onChange={(e) => {
@@ -177,7 +177,7 @@ export default function Invoices() {
                 setPage(1);
               }}
               placeholder="Search by customer or invoice #…"
-              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition"
+              className="w-full pl-9 pr-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/30 transition"
             />
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -188,7 +188,9 @@ export default function Invoices() {
                   setStatusFilter(s);
                   setPage(1);
                 }}
-                className={`px-3 py-2 rounded-lg text-sm font-medium capitalize transition ${statusFilter === s ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                className={`px-3 py-2 rounded-lg text-sm font-medium capitalize transition cursor-pointer ${
+                  statusFilter === s ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
               >
                 {s}
               </button>
@@ -298,7 +300,7 @@ function toInvoicePayload(v: FormValues): InvoiceCreateRequest {
 function Stat({ label, value, tone }: { label: string; value: number; tone: string }) {
   return (
     <Card className="p-4 hover">
-      <p className="text-xs text-slate-500 mb-1">{label}</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{label}</p>
       <p className={`text-lg font-bold ${tone}`}>{CURRENCY(value)}</p>
     </Card>
   );

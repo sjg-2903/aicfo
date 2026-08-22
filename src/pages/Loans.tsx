@@ -82,10 +82,10 @@ export default function Loans() {
   });
 
   const columns: Column<LoanRow>[] = [
-    { key: 'lender', header: 'Lender', render: (l) => <span className="font-medium text-slate-800">{l.lender}</span> },
+    { key: 'lender', header: 'Lender', render: (l) => <span className="font-medium text-slate-800 dark:text-slate-100">{l.lender}</span> },
     { key: 'type', header: 'Loan Type' },
     { key: 'principal', header: 'Principal', align: 'right', render: (l) => CURRENCY(l.principal) },
-    { key: 'outstanding', header: 'Outstanding', align: 'right', sortable: true, render: (l) => <span className="font-semibold text-slate-800">{CURRENCY(l.outstanding)}</span> },
+    { key: 'outstanding', header: 'Outstanding', align: 'right', sortable: true, render: (l) => <span className="font-semibold text-slate-800 dark:text-slate-100">{CURRENCY(l.outstanding)}</span> },
     { key: 'rate', header: 'Rate', align: 'right', render: (l) => `${l.rate}%` },
     { key: 'emi', header: 'EMI', align: 'right', render: (l) => CURRENCY(l.emi) },
     { key: 'nextEmi', header: 'Next EMI' },
@@ -104,7 +104,7 @@ export default function Loans() {
             <button
               type="button"
               onClick={() => markEmiMutation.mutate(l.id)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-green-600 hover:bg-green-50 transition"
+              className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/40 transition cursor-pointer"
               title="Mark EMI paid"
               aria-label="Mark EMI paid"
             >
@@ -126,10 +126,10 @@ export default function Loans() {
         subtitle="Track loans, EMIs and repayment progress"
         actions={
           <>
-            <button onClick={() => setShowUpload(true)} className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium transition">
+            <button onClick={() => setShowUpload(true)} className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition cursor-pointer">
               <Upload className="w-4 h-4" /> Upload
             </button>
-            <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition shadow-sm">
+            <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition shadow-sm cursor-pointer">
               <Plus className="w-4 h-4" /> Add Loan
             </button>
           </>
@@ -138,38 +138,38 @@ export default function Loans() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="p-5 hover">
-          <Banknote className="w-5 h-5 text-blue-600 mb-2" />
-          <p className="text-xs text-slate-500 mb-1">Total Outstanding</p>
-          <p className="text-2xl font-bold text-slate-900">{CURRENCY(totalOutstanding)}</p>
+          <Banknote className="w-5 h-5 text-blue-600 dark:text-blue-400 mb-2" />
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Total Outstanding</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white">{CURRENCY(totalOutstanding)}</p>
         </Card>
         <Card className="p-5 hover">
-          <CalendarClock className="w-5 h-5 text-amber-500 mb-2" />
-          <p className="text-xs text-slate-500 mb-1">Monthly EMI Burden</p>
-          <p className="text-2xl font-bold text-slate-900">{CURRENCY(totalEmi)}</p>
+          <CalendarClock className="w-5 h-5 text-amber-500 dark:text-amber-400 mb-2" />
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Monthly EMI Burden</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white">{CURRENCY(totalEmi)}</p>
         </Card>
         <Card className="p-5 hover">
-          <p className="text-xs text-slate-500 mb-1">Active Loans</p>
-          <p className="text-2xl font-bold text-slate-900">{activeCount}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Active Loans</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white">{activeCount}</p>
         </Card>
       </div>
 
       {/* Repayment progress */}
       <Card className="p-6">
-        <h3 className="text-base font-semibold text-slate-900 mb-5">Repayment Progress</h3>
+        <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-5">Repayment Progress</h3>
         <div className="space-y-5">
-          {all.length === 0 && !isLoading && <p className="text-sm text-slate-400">No loans recorded yet.</p>}
+          {all.length === 0 && !isLoading && <p className="text-sm text-slate-400 dark:text-slate-500">No loans recorded yet.</p>}
           {all.map((loan) => {
             const progress = loan.principal > 0 ? Math.max(0, Math.round(((loan.principal - loan.outstanding) / loan.principal) * 100)) : 0;
             return (
               <div key={loan.id}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm font-medium text-slate-700">
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
                     {loan.lender} — {loan.type}
                   </span>
-                  <span className="text-sm text-slate-500">{progress}% repaid</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">{progress}% repaid</span>
                 </div>
                 <ProgressBar value={progress} />
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                   {CURRENCY(loan.principal - loan.outstanding)} of {CURRENCY(loan.principal)} repaid · Next EMI {CURRENCY(loan.emi)} on {loan.nextEmi || '—'}
                 </p>
               </div>

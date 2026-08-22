@@ -95,16 +95,16 @@ export default function Expenses() {
 
   const columns: Column<ExpenseRow>[] = [
     { key: 'date', header: 'Date', sortable: true },
-    { key: 'description', header: 'Description', render: (e) => <span className="font-medium text-slate-800">{e.description}</span> },
+    { key: 'description', header: 'Description', render: (e) => <span className="font-medium text-slate-800 dark:text-slate-100">{e.description}</span> },
     { key: 'category', header: 'Category' },
     { key: 'vendor', header: 'Vendor' },
-    { key: 'paymentMethod', header: 'Payment Method', render: (e) => <span className="text-slate-500">{e.paymentMethod}</span> },
+    { key: 'paymentMethod', header: 'Payment Method', render: (e) => <span className="text-slate-500 dark:text-slate-400">{e.paymentMethod}</span> },
     {
       key: 'recurring',
       header: 'Recurring',
-      render: (e) => (e.recurring ? <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Recurring</span> : <span className="text-xs text-slate-400">—</span>),
+      render: (e) => (e.recurring ? <span className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-full">Recurring</span> : <span className="text-xs text-slate-400">—</span>),
     },
-    { key: 'amount', header: 'Amount', align: 'right', sortable: true, render: (e) => <span className="font-semibold text-red-600">{CURRENCY(e.amount)}</span> },
+    { key: 'amount', header: 'Amount', align: 'right', sortable: true, render: (e) => <span className="font-semibold text-red-600 dark:text-red-400">{CURRENCY(e.amount)}</span> },
     {
       key: 'actions',
       header: 'Actions',
@@ -129,10 +129,10 @@ export default function Expenses() {
         subtitle="Monitor and categorize business spending"
         actions={
           <>
-            <button onClick={() => setShowUpload(true)} className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-medium transition">
+            <button onClick={() => setShowUpload(true)} className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition cursor-pointer">
               <Upload className="w-4 h-4" /> Upload
             </button>
-            <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition shadow-sm">
+            <button onClick={() => setShowAdd(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition shadow-sm cursor-pointer">
               <Plus className="w-4 h-4" /> Add Expense
             </button>
           </>
@@ -141,8 +141,8 @@ export default function Expenses() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="p-5 hover">
-          <p className="text-xs text-slate-500 mb-1">Total Spend</p>
-          <p className="text-2xl font-bold text-slate-900">{CURRENCY(totalSpend)}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Total Spend</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white">{CURRENCY(totalSpend)}</p>
         </Card>
         <ChartCard title="Expense by Category" subtitle="Share of total spending" className="lg:col-span-2">
           <ResponsiveContainer width="100%" height={200}>
@@ -160,9 +160,9 @@ export default function Expenses() {
       </div>
 
       <Card>
-        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-3">
+        <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
             <input
               value={search}
               onChange={(e) => {
@@ -170,7 +170,7 @@ export default function Expenses() {
                 setPage(1);
               }}
               placeholder="Search expenses…"
-              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition"
+              className="w-full pl-9 pr-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/30 transition"
             />
           </div>
           <select
@@ -179,7 +179,7 @@ export default function Expenses() {
               setCategoryFilter(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400"
+            className="px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-blue-400"
           >
             {categories.map((c) => (
               <option key={c} value={c}>

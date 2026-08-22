@@ -21,11 +21,11 @@ import invoiceService from '@/services/invoiceService';
 import recommendationService from '@/services/recommendationService';
 
 const REPORT_TYPES = [
-  { id: 'financial_summary', name: 'Financial Summary', desc: 'Revenue, expenses and profitability overview', icon: FileText },
+  { id: 'financial_summary', name: 'Financial Recommendations & Performance', desc: 'Revenue, expenses, profit and actionable money advice', icon: FileText },
   { id: 'cash_flow', name: 'Cash Flow Report', desc: 'Detailed cash movement analysis', icon: Wallet },
   { id: 'receivables', name: 'Receivables Report', desc: 'Outstanding invoices and collections', icon: Receipt },
   { id: 'risk', name: 'Risk Report', desc: 'Financial risks and mitigation', icon: ShieldAlert },
-  { id: 'recommendations', name: 'Recommendations Report', desc: 'AI-generated action items', icon: Lightbulb },
+  { id: 'recommendations', name: 'Recommendations Report', desc: 'Actionable financial recommendations', icon: Lightbulb },
 ];
 
 /** Preview types → server-side PDF report types. */
@@ -82,13 +82,13 @@ export default function Reports() {
           const recs = await recommendationService.getRecommendations();
           const critical = recs.filter((r) => r.priority === 'critical' || r.priority === 'high').length;
           return {
-            title: 'Recommendations Report',
+            title: 'Financial Recommendations Report',
             generatedAt: new Date().toISOString(),
             stats: [
               { label: 'Total Recommendations', value: recs.length, tone: 'blue' },
               { label: 'High Priority', value: critical, tone: 'red' },
             ],
-            summary: `${recs.length} recommendation(s) generated from your actual financial data.`,
+            summary: `${recs.length} recommendation(s) generated to optimize capital, increase profit, and reduce expenses.`,
           };
         }
         default:
@@ -102,7 +102,6 @@ export default function Reports() {
     onError: (e) => setError(getErrorMessage(e)),
   });
 
-  // Generates the PDF server-side, then downloads it through the authenticated client.
   const downloadMutation = useMutation({
     mutationFn: async (type: string) => {
       const meta = await reportService.generatePdf(PDF_TYPE_MAP[type] || 'comprehensive');
@@ -154,13 +153,17 @@ export default function Reports() {
         {/* Report configuration */}
         <div className="space-y-4">
           <Card className="p-5">
-            <h3 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <FileBarChart className="w-5 h-5 text-blue-600" /> Generate Report
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+              <FileBarChart className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Generate Report
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-slate-600 block mb-2">Report Type</label>
-                <select value={selected} onChange={(e) => setSelected(e.target.value)} className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400">
+                <label className="text-sm font-medium text-slate-600 dark:text-slate-300 block mb-2">Report Type</label>
+                <select
+                  value={selected}
+                  onChange={(e) => setSelected(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-blue-400"
+                >
                   {REPORT_TYPES.map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.name}
@@ -171,7 +174,7 @@ export default function Reports() {
               <button
                 onClick={generate}
                 disabled={generateMutation.isPending}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 cursor-pointer"
               >
                 {generateMutation.isPending ? (
                   <>
@@ -184,7 +187,7 @@ export default function Reports() {
               <button
                 onClick={() => downloadMutation.mutate(selected)}
                 disabled={downloadMutation.isPending}
-                className="w-full py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 cursor-pointer"
               >
                 {downloadMutation.isPending ? (
                   <>
@@ -196,15 +199,15 @@ export default function Reports() {
                   </>
                 )}
               </button>
-              {error && <p className="text-xs text-red-600">{error}</p>}
-              <p className="text-xs text-slate-400">
-                The PDF includes financial summaries, charts, AI recommendations and key insights — built from your live business data.
+              {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                The PDF includes financial metrics, charts, recommendations, and key insights built from your live business data.
               </p>
             </div>
           </Card>
 
           <Card className="p-5">
-            <h3 className="text-base font-semibold text-slate-900 mb-4">Report Types</h3>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Report Types</h3>
             <div className="space-y-2">
               {REPORT_TYPES.map((r) => {
                 const Icon = r.icon;
@@ -212,12 +215,16 @@ export default function Reports() {
                   <button
                     key={r.id}
                     onClick={() => setSelected(r.id)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition ${selected === r.id ? 'bg-blue-50 border border-blue-200' : 'hover:bg-slate-50 border border-transparent'}`}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition cursor-pointer ${
+                      selected === r.id
+                        ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 border border-transparent'
+                    }`}
                   >
-                    <Icon className={`w-4 h-4 ${selected === r.id ? 'text-blue-600' : 'text-slate-400'}`} />
+                    <Icon className={`w-4 h-4 ${selected === r.id ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`} />
                     <div>
-                      <p className="text-sm font-medium text-slate-800">{r.name}</p>
-                      <p className="text-xs text-slate-400">{r.desc}</p>
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{r.name}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">{r.desc}</p>
                     </div>
                   </button>
                 );
@@ -231,38 +238,38 @@ export default function Reports() {
           {preview ? (
             <Card className="p-6">
               <div className="flex items-center justify-between mb-5">
-                <h3 className="text-base font-semibold text-slate-900">Report Preview</h3>
+                <h3 className="text-base font-semibold text-slate-900 dark:text-white">Report Preview</h3>
                 <button
                   onClick={() => downloadMutation.mutate(selected)}
                   disabled={downloadMutation.isPending}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white rounded-lg text-sm font-medium transition"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white rounded-lg text-sm font-medium transition cursor-pointer"
                 >
                   {downloadMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Download PDF
                 </button>
               </div>
               <div className="space-y-4">
-                <div className="text-center pb-4 border-b border-slate-100">
-                  <p className="text-sm text-slate-400">AI CFO — {preview.title}</p>
-                  <h4 className="text-lg font-bold text-slate-900">{selectedType?.name}</h4>
-                  <p className="text-xs text-slate-400">Generated {new Date(preview.generatedAt).toLocaleString('en-IN')}</p>
+                <div className="text-center pb-4 border-b border-slate-100 dark:border-slate-800">
+                  <p className="text-sm text-slate-400 dark:text-slate-500">AI CFO — {preview.title}</p>
+                  <h4 className="text-lg font-bold text-slate-900 dark:text-white">{selectedType?.name}</h4>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">Generated {new Date(preview.generatedAt).toLocaleString('en-IN')}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   {preview.stats.map((s) => (
                     <PreviewStat key={s.label} label={s.label} value={s.value} tone={TONE[s.tone] || 'slate'} icon={<FileText className="w-4 h-4" />} />
                   ))}
                 </div>
-                <div className="p-4 rounded-lg bg-blue-50">
-                  <p className="text-xs text-blue-700 font-medium mb-1">AI Summary</p>
-                  <p className="text-sm text-blue-800">{preview.summary}</p>
+                <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40">
+                  <p className="text-xs text-blue-700 dark:text-blue-400 font-medium mb-1">Financial Advisory Insight</p>
+                  <p className="text-sm text-blue-800 dark:text-blue-200">{preview.summary}</p>
                 </div>
               </div>
             </Card>
           ) : (
             <Card className="p-6">
-              <h3 className="text-base font-semibold text-slate-900 mb-4">Report Preview</h3>
-              <p className="text-sm text-slate-500">
-                Select a report type and click <span className="font-medium">Preview Report</span> to build a real-time preview from your financial data, or{' '}
-                <span className="font-medium">Generate &amp; Download PDF</span> to save a professional PDF.
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Report Preview</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Select a report type and click <span className="font-medium text-slate-700 dark:text-slate-300">Preview Report</span> to build a real-time preview from your financial data, or{' '}
+                <span className="font-medium text-slate-700 dark:text-slate-300">Generate &amp; Download PDF</span> to save a professional PDF.
               </p>
             </Card>
           )}
@@ -270,14 +277,14 @@ export default function Reports() {
           {/* Previously generated PDFs */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                <HistoryIcon className="w-5 h-5 text-blue-600" /> Generated PDF Reports
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                <HistoryIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Generated PDF Reports
               </h3>
             </div>
             {pdfs.isLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 2 }).map((_, i) => (
-                  <div key={i} className="h-14 bg-slate-100 rounded-lg animate-pulse" />
+                  <div key={i} className="h-14 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse" />
                 ))}
               </div>
             ) : pdfs.isError ? (
@@ -290,13 +297,13 @@ export default function Reports() {
             ) : (
               <div className="space-y-2">
                 {(pdfs.data || []).map((r) => (
-                  <div key={r.id} className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-blue-200 hover:bg-blue-50/40 transition group">
-                    <div className="w-9 h-9 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
+                  <div key={r.id} className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-800 hover:bg-blue-50/40 dark:hover:bg-slate-800/50 transition group">
+                    <div className="w-9 h-9 rounded-lg bg-orange-50 dark:bg-orange-950/40 flex items-center justify-center shrink-0">
                       <FileText className="w-4 h-4 text-orange-500" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800 truncate">{r.title}</p>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{r.title}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">
                         {new Date(r.generated_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} ·{' '}
                         {(r.size_bytes / 1024).toFixed(0)} KB
                       </p>
@@ -304,14 +311,14 @@ export default function Reports() {
                     <button
                       onClick={() => reDownload(r)}
                       disabled={downloadingId === r.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 rounded-lg transition"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 rounded-lg transition cursor-pointer"
                     >
                       {downloadingId === r.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
                       Download
                     </button>
                     <button
                       onClick={() => deleteMutation.mutate(r.id)}
-                      className="p-1.5 rounded-lg text-slate-300 hover:text-red-600 hover:bg-red-50 transition"
+                      className="p-1.5 rounded-lg text-slate-300 dark:text-slate-600 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer"
                       aria-label="Delete report"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -328,12 +335,12 @@ export default function Reports() {
 }
 
 function PreviewStat({ label, value, tone, icon }: { label: string; value: number; tone: string; icon: React.ReactNode }) {
-  const toneClass = tone === 'green' ? 'text-green-600' : tone === 'red' ? 'text-red-600' : tone === 'blue' ? 'text-blue-600' : 'text-slate-900';
+  const toneClass = tone === 'green' ? 'text-green-600 dark:text-green-400' : tone === 'red' ? 'text-red-600 dark:text-red-400' : tone === 'blue' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-900 dark:text-white';
   return (
-    <div className="p-4 rounded-lg bg-slate-50 flex items-center gap-3">
-      <div className="text-slate-400">{icon}</div>
+    <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/60 flex items-center gap-3">
+      <div className="text-slate-400 dark:text-slate-500">{icon}</div>
       <div>
-        <p className="text-xs text-slate-500">{label}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
         <p className={`text-lg font-bold ${toneClass}`}>{CURRENCY(value)}</p>
       </div>
     </div>

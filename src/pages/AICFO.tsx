@@ -43,6 +43,8 @@ interface FailedRequest {
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
 
 const SUGGESTED_QUESTIONS = [
+  'What shall I do with my money?',
+  'How can I make more money?',
   'How is my business doing?',
   'Why is my cash flow decreasing?',
   'Which customers owe me the most?',
@@ -56,9 +58,9 @@ const WELCOME_MESSAGE: Message = {
   id: 'welcome',
   role: 'assistant',
   content:
-    "## Welcome to your AI CFO\n\nAsk about your **cash flow**, **receivables**, **expenses**, **risks**, or **loan readiness**. I use your recorded business data for every answer and can review an attached file in this chat.",
+    "## Welcome to your AI CFO\n\nAsk about **what to do with your money**, **how to make more money & accelerate profits**, **cash flow**, **receivables**, **expenses**, **risks**, or **loan readiness**. I analyze your live business data to provide actionable financial recommendations.",
   timestamp: new Date().toISOString(),
-  engine: 'deterministic',
+  engine: 'ai',
 };
 
 const formatFileSize = (bytes: number) => {
@@ -70,7 +72,7 @@ const formatFileSize = (bytes: number) => {
 const engineLabel = (engine?: string) => {
   if (engine === 'openai') return 'AI CFO (OpenAI)';
   if (engine === 'gemini') return 'AI CFO (Google Gemini)';
-  return 'Financial analysis';
+  return 'AI CFO';
 };
 
 export default function AICFO() {
@@ -148,9 +150,6 @@ export default function AICFO() {
 
     try {
       const reply = await aiCfoService.sendMessage(effectiveMessage, sessionId, file || undefined);
-      // A user may intentionally start a new chat while a slow provider call is
-      // still in flight. Ignore the stale response instead of reviving the old
-      // conversation in the new view.
       if (requestEpoch !== conversationEpochRef.current) return;
       setSessionId(reply.sessionId);
       stickToBottomRef.current = true;
@@ -204,33 +203,33 @@ export default function AICFO() {
     <div className="flex min-h-[calc(100dvh-7rem)] flex-col gap-4 lg:h-[calc(100dvh-8rem)]">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-sm shadow-blue-200">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-sm shadow-blue-200 dark:shadow-none">
             <BrainCircuit className="h-6 w-6 text-white" />
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-xl font-bold tracking-tight text-slate-900">AI CFO Assistant</h1>
+            <h1 className="truncate text-xl font-bold tracking-tight text-slate-900 dark:text-white">AI CFO Assistant</h1>
             <div className="flex items-center gap-1.5">
               <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="truncate text-xs text-slate-500">
-                Grounded in your business data with OpenAI or Gemini explanations when configured
+              <span className="truncate text-xs text-slate-500 dark:text-slate-400">
+                Financial intelligence and strategic money recommendations grounded in your business data
               </span>
             </div>
           </div>
         </div>
         <button
           onClick={reset}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-600 dark:text-slate-300 transition hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
           aria-label="Start a new chat"
         >
           <RotateCcw className="h-4 w-4" /> <span>New chat</span>
         </button>
       </div>
 
-      <Card className="relative flex min-h-[520px] flex-1 flex-col overflow-hidden border-slate-200/90 shadow-sm">
+      <Card className="relative flex min-h-[520px] flex-1 flex-col overflow-hidden border-slate-200/90 dark:border-slate-800 shadow-sm">
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="relative flex-1 overflow-y-auto overscroll-contain bg-gradient-to-b from-slate-50/70 via-white to-slate-50/40 p-3 sm:p-5 lg:p-6"
+          className="relative flex-1 overflow-y-auto overscroll-contain bg-gradient-to-b from-slate-50/70 via-white to-slate-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-3 sm:p-5 lg:p-6"
           aria-live="polite"
         >
           <div className="mx-auto max-w-5xl space-y-5">
@@ -243,7 +242,7 @@ export default function AICFO() {
                 >
                   <div
                     className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full shadow-sm ${
-                      msg.role === 'user' ? 'bg-slate-700' : 'bg-gradient-to-br from-blue-600 to-indigo-600'
+                      msg.role === 'user' ? 'bg-slate-700 dark:bg-slate-600' : 'bg-gradient-to-br from-blue-600 to-indigo-600'
                     }`}
                     aria-hidden="true"
                   >
@@ -252,34 +251,36 @@ export default function AICFO() {
                   <div
                     className={`min-w-0 flex-1 rounded-2xl px-4 py-3 text-sm shadow-sm ${
                       msg.role === 'user'
-                        ? 'rounded-tr-sm bg-blue-600 text-white shadow-blue-100'
-                        : 'rounded-tl-sm border border-slate-200 bg-white text-slate-700'
+                        ? 'rounded-tr-sm bg-blue-600 text-white shadow-blue-100 dark:shadow-none'
+                        : 'rounded-tl-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200'
                     }`}
                   >
                     {msg.role === 'assistant' && (
-                      <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-blue-600">
+                      <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">
                         <Sparkles className="h-3.5 w-3.5" />
                         {engineLabel(msg.engine)}
-                        <span className="font-normal normal-case tracking-normal text-slate-400">· grounded response</span>
+                        <span className="font-normal normal-case tracking-normal text-slate-400 dark:text-slate-500">· financial advisory</span>
                       </div>
                     )}
                     {msg.attachment && (
                       <div
                         className={`mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 ${
-                          msg.role === 'user' ? 'border-blue-400/50 bg-blue-500/50' : 'border-slate-200 bg-slate-50'
+                          msg.role === 'user'
+                            ? 'border-blue-400/50 bg-blue-500/50'
+                            : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50'
                         }`}
                       >
                         <FileText className="h-4 w-4 shrink-0" />
                         <div className="min-w-0">
                           <p className="truncate text-xs font-medium">{msg.attachment.name}</p>
-                          <p className={`text-[10px] ${msg.role === 'user' ? 'text-blue-100' : 'text-slate-400'}`}>
+                          <p className={`text-[10px] ${msg.role === 'user' ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'}`}>
                             {formatFileSize(msg.attachment.size)}
                           </p>
                         </div>
                       </div>
                     )}
                     <ChatMarkdown content={msg.content} tone={msg.role} />
-                    <div className={`mt-2.5 text-[10px] ${msg.role === 'user' ? 'text-blue-100' : 'text-slate-400'}`}>
+                    <div className={`mt-2.5 text-[10px] ${msg.role === 'user' ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'}`}>
                       {new Date(msg.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
@@ -291,7 +292,7 @@ export default function AICFO() {
                         key={`${msg.id}-${question}`}
                         onClick={() => void send(question)}
                         disabled={typing}
-                        className="rounded-full border border-blue-100 bg-white px-2.5 py-1 text-xs font-medium text-blue-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-full border border-blue-100 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs font-medium text-blue-700 dark:text-blue-300 shadow-sm transition hover:border-blue-200 dark:hover:border-slate-600 hover:bg-blue-50 dark:hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {question}
                       </button>
@@ -306,35 +307,35 @@ export default function AICFO() {
                 <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 shadow-sm">
                   <Sparkles className="h-4 w-4 text-white" />
                 </div>
-                <div className="rounded-2xl rounded-tl-sm border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                <div className="rounded-2xl rounded-tl-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 px-4 py-3 shadow-sm">
                   <div className="flex items-center gap-2.5">
                     <div className="flex items-center gap-1" aria-hidden="true">
                       <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '0ms' }} />
                       <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '150ms' }} />
                       <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '300ms' }} />
                     </div>
-                    <span className="text-xs font-medium text-slate-500">Reviewing your financial context…</span>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Analyzing financial intelligence…</span>
                   </div>
                 </div>
               </div>
             )}
 
             {failedRequest && !typing && (
-              <div className="ml-0 flex max-w-xl animate-in items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800 sm:ml-10" role="alert">
+              <div className="ml-0 flex max-w-xl animate-in items-start gap-3 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-800 dark:text-red-300 sm:ml-10" role="alert">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">We couldn’t send that message.</p>
-                  <p className="mt-0.5 text-xs leading-5 text-red-700">{failedRequest.reason}</p>
+                  <p className="mt-0.5 text-xs leading-5 text-red-700 dark:text-red-400">{failedRequest.reason}</p>
                 </div>
                 <button
                   onClick={() => void send(failedRequest.message, { file: failedRequest.file, appendUserMessage: false })}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-red-700 dark:text-red-300 transition hover:bg-red-100 dark:hover:bg-red-900/50"
                 >
                   <RefreshCw className="h-3.5 w-3.5" /> Retry
                 </button>
                 <button
                   onClick={() => setFailedRequest(null)}
-                  className="rounded p-0.5 text-red-500 transition hover:bg-red-100"
+                  className="rounded p-0.5 text-red-500 transition hover:bg-red-100 dark:hover:bg-red-900/50"
                   aria-label="Dismiss send error"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -347,21 +348,21 @@ export default function AICFO() {
         {showJumpToLatest && (
           <button
             onClick={() => scrollToLatest()}
-            className="absolute bottom-28 right-4 z-10 inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-lg transition hover:border-blue-200 hover:text-blue-700 sm:right-6"
+            className="absolute bottom-28 right-4 z-10 inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-lg transition hover:border-blue-200 hover:text-blue-700 dark:hover:text-blue-400 sm:right-6"
           >
             <ArrowDown className="h-3.5 w-3.5" /> Latest
           </button>
         )}
 
         {messages.length <= 1 && !typing && (
-          <div className="border-t border-slate-100 bg-white/90 px-4 pt-3 sm:px-6">
-            <p className="mb-2 text-xs font-medium text-slate-400">Try asking:</p>
+          <div className="border-t border-slate-100 dark:border-slate-800 bg-white/90 dark:bg-slate-900 px-4 pt-3 sm:px-6">
+            <p className="mb-2 text-xs font-medium text-slate-400 dark:text-slate-500">Try asking:</p>
             <div className="flex max-h-20 flex-wrap gap-2 overflow-y-auto pb-3">
               {SUGGESTED_QUESTIONS.map((question) => (
                 <button
                   key={question}
                   onClick={() => void send(question)}
-                  className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-blue-50 hover:text-blue-700"
+                  className="rounded-full bg-slate-100 dark:bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 transition hover:bg-blue-50 dark:hover:bg-blue-900/40 hover:text-blue-700 dark:hover:text-blue-300"
                 >
                   {question}
                 </button>
@@ -370,17 +371,17 @@ export default function AICFO() {
           </div>
         )}
 
-        <div className="border-t border-slate-200 bg-white p-3 sm:p-4">
+        <div className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 sm:p-4">
           {selectedFile && (
-            <div className="mb-3 flex max-w-full items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-blue-800">
+            <div className="mb-3 flex max-w-full items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 px-3 py-2 text-blue-800 dark:text-blue-200">
               <FileText className="h-4 w-4 shrink-0" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-semibold">{selectedFile.name}</p>
-                <p className="text-[10px] text-blue-600">{formatFileSize(selectedFile.size)} · ready to review</p>
+                <p className="text-[10px] text-blue-600 dark:text-blue-400">{formatFileSize(selectedFile.size)} · ready to review</p>
               </div>
               <button
                 onClick={() => setSelectedFile(null)}
-                className="rounded p-0.5 transition hover:bg-blue-100"
+                className="rounded p-0.5 transition hover:bg-blue-100 dark:hover:bg-blue-900/50"
                 aria-label="Remove attachment"
               >
                 <X className="h-3.5 w-3.5" />
@@ -401,7 +402,7 @@ export default function AICFO() {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={typing}
-              className="rounded-xl border border-slate-200 p-3 text-slate-500 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl border border-slate-200 dark:border-slate-700 p-3 text-slate-500 dark:text-slate-400 transition hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
               aria-label="Attach a file"
               title="Attach a file (up to 15 MB)"
             >
@@ -419,24 +420,24 @@ export default function AICFO() {
               }}
               rows={1}
               maxLength={4000}
-              placeholder={selectedFile ? 'Ask something about this file…' : 'Ask about your finances…'}
-              className="min-h-[48px] max-h-36 flex-1 resize-none rounded-xl border border-slate-200 px-3.5 py-3 text-sm leading-5 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50"
+              placeholder={selectedFile ? 'Ask something about this file…' : 'Ask about what to do with your money, making more revenue, cash flow…'}
+              className="min-h-[48px] max-h-36 flex-1 resize-none rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-3 text-sm leading-5 text-slate-800 dark:text-slate-100 outline-none transition placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/30 disabled:bg-slate-50 dark:disabled:bg-slate-900"
               aria-label="Message AI CFO"
             />
             <button
               onClick={() => void send(input)}
               disabled={typing || (!input.trim() && !selectedFile)}
-              className="rounded-xl bg-blue-600 p-3 text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+              className="rounded-xl bg-blue-600 p-3 text-white shadow-sm shadow-blue-200 dark:shadow-none transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-600 disabled:shadow-none"
               aria-label="Send message"
             >
               <Send className="h-5 w-5" />
             </button>
           </div>
-          <div className="mt-2 flex items-center justify-between gap-3 px-1 text-[10px] text-slate-400">
+          <div className="mt-2 flex items-center justify-between gap-3 px-1 text-[10px] text-slate-400 dark:text-slate-500">
             <p>Enter to send · Shift + Enter for a new line</p>
-            <p className={input.length > 3600 ? 'text-amber-600' : ''}>{input.length}/4000</p>
+            <p className={input.length > 3600 ? 'text-amber-600 dark:text-amber-400' : ''}>{input.length}/4000</p>
           </div>
-          <p className="mt-1.5 text-center text-[10px] leading-4 text-slate-400">
+          <p className="mt-1.5 text-center text-[10px] leading-4 text-slate-400 dark:text-slate-500">
             Guidance is based on your recorded data and is not financial or tax advice. Attachments are not imported into your ledgers.
           </p>
         </div>

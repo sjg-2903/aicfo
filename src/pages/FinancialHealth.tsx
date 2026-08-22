@@ -28,9 +28,9 @@ export default function FinancialHealth() {
           {/* Score overview */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Card className="p-6 flex flex-col items-center" hover>
-              <h3 className="text-base font-semibold text-slate-900 mb-4 self-start">Health Score</h3>
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4 self-start">Health Score</h3>
               {isLoading ? (
-                <div className="h-[170px] flex items-center justify-center text-slate-400">Loading…</div>
+                <div className="h-[170px] flex items-center justify-center text-slate-400 dark:text-slate-500">Loading…</div>
               ) : (
                 <ScoreRing score={score} size={170} stroke={13} label={health?.label ?? ''} color={color} />
               )}
@@ -41,11 +41,11 @@ export default function FinancialHealth() {
                 {(health?.factors || []).map((f) => (
                   <div key={f.name}>
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-sm font-medium text-slate-700">{f.name.replace(/_/g, ' ')}</span>
-                      <span className="text-sm font-semibold text-slate-900">{Math.round(f.score)}/100</span>
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{f.name.replace(/_/g, ' ')}</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">{Math.round(f.score)}/100</span>
                     </div>
                     <ProgressBar value={f.score} color={f.score >= 75 ? '#10b981' : f.score >= 55 ? '#f59e0b' : '#ef4444'} />
-                    <p className="text-xs text-slate-400 mt-1">Weight: {Math.round(f.weight * 100)}%</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Weight: {Math.round(f.weight * 100)}%</p>
                   </div>
                 ))}
               </div>
@@ -54,14 +54,14 @@ export default function FinancialHealth() {
 
           {/* Indicators */}
           <Card className="p-6">
-            <h3 className="text-base font-semibold text-slate-900 mb-4">Key Financial Indicators</h3>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Key Financial Indicators</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               {(health?.indicators || []).map((ind) => (
-                <div key={ind.name} className="p-4 rounded-lg bg-slate-50 text-center">
-                  <p className="text-xs text-slate-500 mb-1.5">{ind.name}</p>
-                  <p className="text-xl font-bold text-slate-900">
+                <div key={ind.name} className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-transparent dark:border-slate-700/60 text-center">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1.5">{ind.name}</p>
+                  <p className="text-xl font-bold text-slate-900 dark:text-white">
                     {ind.unit === '₹' ? CURRENCY(ind.value) : ind.value}
-                    <span className="text-sm font-normal text-slate-400 ml-0.5">{ind.unit}</span>
+                    <span className="text-sm font-normal text-slate-400 dark:text-slate-500 ml-0.5">{ind.unit}</span>
                   </p>
                   <div className="mt-2 flex justify-center">
                     <Pill value={ind.status} />
@@ -75,13 +75,13 @@ export default function FinancialHealth() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card className="p-6">
               <div className="flex items-center gap-2 mb-4">
-                <ThumbsUp className="w-5 h-5 text-green-600" />
-                <h3 className="text-base font-semibold text-slate-900">Strengths</h3>
+                <ThumbsUp className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <h3 className="text-base font-semibold text-slate-900 dark:text-white">Strengths</h3>
               </div>
               <ul className="space-y-3">
-                {(health?.strengths || []).length === 0 && <li className="text-sm text-slate-400">No notable strengths detected yet.</li>}
+                {(health?.strengths || []).length === 0 && <li className="text-sm text-slate-400 dark:text-slate-500">No notable strengths detected yet.</li>}
                 {(health?.strengths || []).map((s, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                  <li key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
                     <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
                     {s}
                   </li>
@@ -91,13 +91,13 @@ export default function FinancialHealth() {
 
             <Card className="p-6">
               <div className="flex items-center gap-2 mb-4">
-                <ThumbsDown className="w-5 h-5 text-red-500" />
-                <h3 className="text-base font-semibold text-slate-900">Weaknesses</h3>
+                <ThumbsDown className="w-5 h-5 text-red-500 dark:text-red-400" />
+                <h3 className="text-base font-semibold text-slate-900 dark:text-white">Weaknesses</h3>
               </div>
               <ul className="space-y-3">
-                {(health?.weaknesses || []).length === 0 && <li className="text-sm text-slate-400">No major weaknesses detected.</li>}
+                {(health?.weaknesses || []).length === 0 && <li className="text-sm text-slate-400 dark:text-slate-500">No major weaknesses detected.</li>}
                 {(health?.weaknesses || []).map((w, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                  <li key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
                     <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
                     {w}
                   </li>
@@ -109,12 +109,12 @@ export default function FinancialHealth() {
           {/* AI interpretation */}
           <Card className="p-6 border-l-4 border-l-blue-600">
             <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="w-5 h-5 text-blue-600" />
-              <h3 className="text-base font-semibold text-slate-900">AI Interpretation</h3>
+              <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white">Advisory Interpretation</h3>
             </div>
-            <p className="text-sm text-slate-600 leading-relaxed">{health?.interpretation}</p>
-            <Link to="/ai-cfo" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 transition">
-              Discuss with AI CFO <TrendingUp className="w-4 h-4" />
+            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{health?.interpretation}</p>
+            <Link to="/ai-cfo" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition">
+              Discuss recommendations with AI CFO <TrendingUp className="w-4 h-4" />
             </Link>
           </Card>
         </>

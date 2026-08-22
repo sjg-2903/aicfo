@@ -260,25 +260,25 @@ export default function Dashboard() {
         </ChartCard>
 
         <Card className="p-6">
-          <h3 className="text-base font-semibold text-slate-900 mb-4">Loan / Debt Overview</h3>
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Loan / Debt Overview</h3>
           <div className="space-y-4">
-            {loanOverview.length === 0 && !loans.isLoading && <p className="text-sm text-slate-400">No active loans.</p>}
+            {loanOverview.length === 0 && !loans.isLoading && <p className="text-sm text-slate-400 dark:text-slate-500">No active loans.</p>}
             {loanOverview.map((loan) => (
-              <div key={loan.name} className="p-3 rounded-lg bg-slate-50">
+              <div key={loan.name} className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-transparent dark:border-slate-700/60">
                 <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className="text-sm font-medium text-slate-700 truncate">{loan.name}</span>
-                  <span className="text-xs text-slate-500 whitespace-nowrap">{loan.progress}% paid</span>
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{loan.name}</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">{loan.progress}% paid</span>
                 </div>
-                <div className="w-full bg-white rounded-full h-2 mb-2 overflow-hidden">
+                <div className="w-full bg-white dark:bg-slate-700 rounded-full h-2 mb-2 overflow-hidden">
                   <div className="h-full rounded-full bg-blue-500 transition-all duration-700" style={{ width: `${loan.progress}%` }} />
                 </div>
-                <p className="text-xs text-slate-500">
-                  Outstanding <span className="font-semibold text-slate-700">{CURRENCY(loan.outstanding)}</span> · EMI {CURRENCY(loan.emi)}
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Outstanding <span className="font-semibold text-slate-700 dark:text-slate-200">{CURRENCY(loan.outstanding)}</span> · EMI {CURRENCY(loan.emi)}
                 </p>
               </div>
             ))}
           </div>
-          <Link to="/loans" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 transition">
+          <Link to="/loans" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition">
             Manage loans <ArrowRight className="w-4 h-4" />
           </Link>
         </Card>
@@ -288,7 +288,7 @@ export default function Dashboard() {
       <Card className="p-4 border-l-4 border-l-amber-500 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
-          <p className="text-sm text-slate-700">
+          <p className="text-sm text-slate-700 dark:text-slate-300">
             {risk.data && risk.data.summary.active_risks > 0 ? (
               <>
                 <span className="font-semibold">{risk.data.summary.active_risks} active risks</span> require attention
@@ -299,7 +299,7 @@ export default function Dashboard() {
             )}
           </p>
         </div>
-        <Link to="/risk-analysis" className="shrink-0 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 transition">
+        <Link to="/risk-analysis" className="shrink-0 inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition">
           Review <ArrowRight className="w-4 h-4" />
         </Link>
       </Card>

@@ -96,13 +96,13 @@ export default function Profile() {
         </Card>
       ) : (
         <Card className="p-6">
-          <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
-            <div className="w-14 h-14 rounded-xl bg-blue-600 flex items-center justify-center">
+          <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100 dark:border-slate-800">
+            <div className="w-14 h-14 rounded-xl bg-blue-600 flex items-center justify-center shadow-sm">
               <Building2 className="w-7 h-7 text-white" />
             </div>
             <div>
-              <p className="text-lg font-semibold text-slate-900">{form.businessName || '—'}</p>
-              <p className="text-sm text-slate-500">
+              <p className="text-lg font-semibold text-slate-900 dark:text-white">{form.businessName || '—'}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 {form.industry || '—'} · {form.businessType || '—'}
               </p>
             </div>
@@ -111,19 +111,19 @@ export default function Profile() {
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-10 bg-slate-100 rounded-lg animate-pulse" />
+                <div key={i} className="h-10 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse" />
               ))}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {fields.map((f) => (
                 <div key={f.key}>
-                  <label className="text-sm font-medium text-slate-600 block mb-1.5">{f.label}</label>
+                  <label className="text-sm font-medium text-slate-600 dark:text-slate-300 block mb-1.5">{f.label}</label>
                   <input
                     type={f.type}
                     value={(form as Record<string, string>)[f.key]}
                     onChange={(e) => update(f.key, e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition"
+                    className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/30 transition"
                   />
                 </div>
               ))}
@@ -137,7 +137,7 @@ export default function Profile() {
                 saveMutation.mutate();
               }}
               disabled={saving}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-lg text-sm font-medium transition"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white rounded-lg text-sm font-medium transition cursor-pointer"
             >
               <Save className="w-4 h-4" /> {saving ? 'Saving…' : 'Save Changes'}
             </button>
