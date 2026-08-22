@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileCheck, AlertTriangle, CalendarClock, Plus, Upload } from 'lucide-react';
 import { Card, PageHeader, Pill, ErrorState } from '@/components/ui';
+import SegmentStepsGuide from '@/components/SegmentStepsGuide';
 import { useToast } from '@/components/Toast';
 import UploadWizard from '@/components/UploadWizard';
 import { DataTable, type Column } from '@/components/DataTable';
@@ -142,6 +143,9 @@ export default function GST() {
           </>
         }
       />
+
+      {/* Segment Steps Guide */}
+      <SegmentStepsGuide segment="gst" defaultExpanded={false} />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatusCard icon={<CalendarClock className="w-5 h-5 text-blue-600 dark:text-blue-400" />} label="Upcoming Filings" value={pending.length} sub="Due in next 30 days" />

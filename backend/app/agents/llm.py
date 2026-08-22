@@ -28,24 +28,24 @@ logger = logging.getLogger(__name__)
 
 _IMAGE_FORMATS = {"png", "jpeg", "gif", "webp"}
 _RETRYABLE_STATUS_CODES = {408, 409, 429}
-# Fixed AI-first priority: OpenAI, then Gemini, then deterministic output.
-_PROVIDER_PRIORITY = ("openai", "gemini")
+# Fixed AI-first priority: Google Gemini first, then OpenAI, then deterministic output.
+_PROVIDER_PRIORITY = ("gemini", "openai")
 
 
 def _provider_configured(provider: str) -> bool:
     """A provider is usable only when both its API key and model are present."""
-    if provider == "openai":
-        return bool((settings.OPENAI_API_KEY or "").strip() and (settings.OPENAI_MODEL or "").strip())
     if provider == "gemini":
         return bool((settings.GEMINI_API_KEY or "").strip() and (settings.GEMINI_MODEL or "").strip())
+    if provider == "openai":
+        return bool((settings.OPENAI_API_KEY or "").strip() and (settings.OPENAI_MODEL or "").strip())
     return False
 
 
 def configured_providers() -> list[str]:
     """Return every configured provider, in priority (failover) order.
 
-    ``LLM_PROVIDER=auto`` (the default) tries OpenAI first, then Gemini.
-    Setting it explicitly to ``openai`` or ``gemini`` moves that provider to
+    ``LLM_PROVIDER=auto`` (the default) tries Google Gemini first, then OpenAI.
+    Setting it explicitly to ``gemini`` or ``openai`` moves that provider to
     the front, but the other configured provider is still tried as failover
     before the deterministic fallback. This keeps AI-first behaviour: both
     providers are attempted, and deterministic output is used only when every
@@ -61,8 +61,8 @@ def configured_providers() -> list[str]:
 def active_provider() -> Optional[str]:
     """Return the preferred configured provider (first in failover order).
 
-    With ``LLM_PROVIDER=auto`` this is OpenAI when its key is present, else
-    Gemini. Explicit ``openai`` or ``gemini`` moves that provider first.
+    With ``LLM_PROVIDER=auto`` this is Google Gemini when its key is present, else
+    OpenAI. Explicit ``gemini`` or ``openai`` moves that provider first.
     """
     providers = configured_providers()
     return providers[0] if providers else None
@@ -319,8 +319,8 @@ async def _complete_with_failover(
 ) -> tuple[Optional[str], Optional[str]]:
     """Ask every configured provider in priority order; return ``(text, provider)``.
 
-    OpenAI is attempted before Gemini (unless ``LLM_PROVIDER`` explicitly moves
-    Gemini first). The first provider that returns usable text wins. When no
+    Google Gemini is attempted before OpenAI (unless ``LLM_PROVIDER`` explicitly moves
+    OpenAI first). The first provider that returns usable text wins. When no
     provider is configured or every attempt fails, ``(None, None)`` is returned
     so callers can supply their deterministic fallback.
     """

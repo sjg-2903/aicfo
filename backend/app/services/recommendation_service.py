@@ -1,11 +1,9 @@
 """Recommendation service — AI-first narratives with deterministic safety net.
 
-The configured providers never receive a vague request by themselves. We send a user instruction, a
-calculated analysis spanning every finance section, and the exact schema used by
-the Recommendations screen. OpenAI is tried first, Gemini second; generated
-output is validated and normalised before it can be persisted. The trusted
-deterministic engine is used only when no provider is configured, every provider
-attempt fails, or the model returns unusable JSON.
+Google Gemini is tried first, OpenAI second; generated output is validated and
+normalised before persistence. The trusted deterministic engine is used only when
+no provider is configured, every provider attempt fails, or the model returns
+unusable JSON.
 """
 
 import hashlib
@@ -30,7 +28,6 @@ logger = logging.getLogger(__name__)
 
 _PRIORITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
 
-
 _CONTENT_FIELDS = (
     "title",
     "description",
@@ -45,60 +42,26 @@ _CONTENT_FIELDS = (
 
 _VALID_PRIORITIES = set(_PRIORITY_ORDER)
 _MAX_AI_RECOMMENDATIONS = 10
-_MAX_SECTION_ROWS = 75
+_MAX_SECTION_ROWS = 25
 
-# This is intentionally the same shape consumed by ``mapRecommendation`` and
-# rendered by the Recommendations page.  Keeping it here makes the contract
-# sent to the LLM explicit and testable.
 _RECOMMENDATION_DISPLAY_SCHEMA = {
     "recommendations": [
         {
-            "category": "lowercase snake_case string",
+            "category": "cash_flow | revenue | expenses | debt | gst | risk | growth | general",
             "title": "string — concise recommendation title",
-            "description": "string — evidence from the supplied finance data",
+            "description": "string — evidence with numbers from the supplied finance data",
             "reason": "string — why this recommendation matters",
             "priority": "critical | high | medium | low",
             "status": "new",
-            "recommended_action": "string — concrete next action",
+            "recommended_action": "string — concrete step-by-step next action",
             "expected_impact": "string — measurable or clearly stated benefit",
-            "impact_value": "number — use 0 when no reliable amount is available",
-            "source_agent": "string — e.g. Cash Flow Agent",
+            "impact_value": "number — estimated INR benefit or 0",
+            "source_agent": "string — e.g. Cash Flow Agent | Invoice Agent | Expense Agent | Loan Agent | GST Agent | Risk Agent | AI CFO",
             "rid": "server-generated stable recommendation identifier",
             "created_at": "server-generated ISO-8601 timestamp",
         }
     ]
 }
-
-_SECTION_FIELDS: dict[str, tuple[str, ...]] = {
-    "transactions": (
-        "date", "description", "amount", "type", "category", "payment_method",
-    ),
-    "invoices": (
-        "invoice_number", "customer_name", "invoice_date", "due_date",
-        "total_amount", "paid_amount", "status",
-    ),
-    "expenses": (
-        "date", "description", "category", "vendor", "amount",
-        "payment_method", "recurring",
-    ),
-    "gst_records": (
-        "period", "period_start", "period_end", "due_date", "taxable_turnover",
-        "tax_amount", "paid_amount", "status",
-    ),
-    "loans": (
-        "lender", "loan_type", "principal_amount", "outstanding_amount",
-        "interest_rate", "emi_amount", "start_date", "end_date",
-        "next_emi_date", "status",
-    ),
-}
-
-
-def _public_section_rows(rows: list[dict], fields: tuple[str, ...]) -> list[dict]:
-    """Project finance rows to recommendation-relevant, JSON-safe fields."""
-    return [
-        {field: row.get(field) for field in fields if row.get(field) is not None}
-        for row in rows
-    ]
 
 
 async def _build_ai_analysis(
@@ -106,77 +69,139 @@ async def _build_ai_analysis(
     business_id: Any,
     deterministic_recommendations: list[dict],
 ) -> dict:
-    """Build one trusted analysis object covering all five finance sections.
+    """Build a rich, structured telemetry summary covering all financial dimensions.
 
-    Aggregate analytics are calculated over the complete business dataset.  A
-    bounded recent-row sample is included for concrete evidence without sending
-    an unbounded database dump to an external model; coverage counts make that
-    distinction explicit to the model.
+    Calculates aggregate metrics, ratios, forecasts, top debtors, and spending
+    distributions into a clean JSON structure that fits efficiently within LLM context
+    windows without row-dump overhead.
     """
-    # Imported lazily to avoid a module cycle: ai_cfo imports this service only
-    # inside its ``recommend`` function.
     from app.agents.ai_cfo import build_context
 
     calculated = await build_context(db, business_id)
-    sections: dict[str, dict] = {}
-    for section, fields in _SECTION_FIELDS.items():
-        collection = db[COLLECTIONS[section]]
-        total = await collection.count_documents({"business_id": business_id})
-        sort_field = "date"
-        if section == "invoices":
-            sort_field = "invoice_date"
-        elif section == "gst_records":
-            sort_field = "due_date"
-        elif section == "loans":
-            sort_field = "next_emi_date"
-        rows = await collection.find({"business_id": business_id}).sort(
-            sort_field, -1
-        ).limit(_MAX_SECTION_ROWS).to_list(length=_MAX_SECTION_ROWS)
-        sections[section] = {
-            "total_records_analyzed": total,
-            "records_in_prompt": len(rows),
-            "records": _public_section_rows(rows, fields),
+
+    # Top overdue invoices
+    overdue_invoices = await db[COLLECTIONS["invoices"]].find(
+        {"business_id": business_id, "status": "overdue"}
+    ).sort("due_date", 1).limit(5).to_list(length=5)
+    top_overdue = [
+        {
+            "invoice_number": inv.get("invoice_number"),
+            "customer_name": inv.get("customer_name"),
+            "amount": inv.get("total_amount", 0),
+            "due_date": str(inv.get("due_date", "")),
         }
+        for inv in overdue_invoices
+    ]
+
+    # Top expense categories
+    expenses = await db[COLLECTIONS["expenses"]].find({"business_id": business_id}).limit(100).to_list(length=100)
+    category_totals: dict[str, float] = {}
+    total_spend = 0.0
+    for exp in expenses:
+        amt = float(exp.get("amount") or 0)
+        cat = str(exp.get("category") or "General").strip().title()
+        category_totals[cat] = category_totals.get(cat, 0.0) + amt
+        total_spend += amt
+    top_expense_categories = [
+        {
+            "category": cat,
+            "amount": amt,
+            "share_percentage": round((amt / total_spend * 100) if total_spend > 0 else 0, 1),
+        }
+        for cat, amt in sorted(category_totals.items(), key=lambda x: x[1], reverse=True)[:5]
+    ]
+
+    # GST summary
+    gst_records = await db[COLLECTIONS["gst_records"]].find({"business_id": business_id}).to_list(length=10)
+    unpaid_gst = [g for g in gst_records if g.get("status") in ("pending", "overdue")]
+    total_unpaid_gst = sum(
+        float(g.get("tax_amount") or 0) - float(g.get("paid_amount") or 0) for g in unpaid_gst
+    )
+
+    # Active loans
+    active_loans = await db[COLLECTIONS["loans"]].find(
+        {"business_id": business_id, "status": "active"}
+    ).to_list(length=10)
+    loan_summary = [
+        {
+            "lender": l.get("lender"),
+            "type": l.get("loan_type"),
+            "outstanding": l.get("outstanding_amount", 0),
+            "emi": l.get("emi_amount", 0),
+            "interest_rate": l.get("interest_rate", 0),
+            "next_emi_date": str(l.get("next_emi_date", "")),
+        }
+        for l in active_loans
+    ]
 
     trusted_candidates = [
         {key: value for key, value in rec.items() if key in _CONTENT_FIELDS}
         for rec in deterministic_recommendations[:_MAX_AI_RECOMMENDATIONS]
     ]
+
     return {
-        "calculated_analysis": {
-            "metrics": calculated["metrics"],
-            "financial_health": calculated["health"],
-            "risk_analysis": calculated["risk"],
-            "loan_readiness": calculated["loan_readiness"],
-            "cash_flow_forecast": calculated["forecast"],
+        "financial_telemetry": {
+            "metrics": calculated.get("metrics", {}),
+            "financial_health": calculated.get("health", {}),
+            "risk_analysis": calculated.get("risk", {}),
+            "loan_readiness": calculated.get("loan_readiness", {}),
+            "cash_flow_forecast": calculated.get("forecast"),
         },
-        "finance_sections": sections,
-        "trusted_candidate_actions": trusted_candidates,
+        "key_breakdowns": {
+            "top_overdue_invoices": top_overdue,
+            "top_expense_categories": top_expense_categories,
+            "unpaid_gst_liability": total_unpaid_gst,
+            "active_loans": loan_summary,
+        },
+        "calculated_candidate_actions": trusted_candidates,
     }
 
 
 def _extract_json_payload(text: str) -> Any:
-    """Decode JSON even when a provider wraps it in a Markdown code fence."""
+    """Decode JSON even when a provider wraps it in markdown fences, backticks or commentary."""
     candidate = text.strip()
+    if not candidate:
+        return None
+
+    # Strip code fences
     candidate = re.sub(r"^```(?:json)?\s*", "", candidate, flags=re.IGNORECASE)
     candidate = re.sub(r"\s*```$", "", candidate)
+    candidate = candidate.strip()
+
     try:
         return json.loads(candidate)
     except (TypeError, ValueError):
         pass
 
-    object_start, object_end = candidate.find("{"), candidate.rfind("}")
-    array_start, array_end = candidate.find("["), candidate.rfind("]")
-    spans = []
+    # Match outermost JSON object { ... }
+    object_start = candidate.find("{")
+    object_end = candidate.rfind("}")
     if object_start >= 0 and object_end > object_start:
-        spans.append(candidate[object_start : object_end + 1])
-    if array_start >= 0 and array_end > array_start:
-        spans.append(candidate[array_start : array_end + 1])
-    for span in spans:
+        snippet = candidate[object_start : object_end + 1]
         try:
-            return json.loads(span)
+            return json.loads(snippet)
         except ValueError:
-            continue
+            # Try fixing trailing commas
+            cleaned = re.sub(r",\s*([}\]])", r"\1", snippet)
+            try:
+                return json.loads(cleaned)
+            except ValueError:
+                pass
+
+    # Match outermost JSON array [ ... ]
+    array_start = candidate.find("[")
+    array_end = candidate.rfind("]")
+    if array_start >= 0 and array_end > array_start:
+        snippet = candidate[array_start : array_end + 1]
+        try:
+            return json.loads(snippet)
+        except ValueError:
+            cleaned = re.sub(r",\s*([}\]])", r"\1", snippet)
+            try:
+                return json.loads(cleaned)
+            except ValueError:
+                pass
+
     return None
 
 
@@ -247,35 +272,40 @@ async def _generate_with_ai(
     deterministic_recommendations: list[dict],
     now: datetime,
 ) -> tuple[list[dict], Optional[str]]:
-    """Ask the configured model for display-ready JSON, with safe fallback."""
+    """Ask Google Gemini (or OpenAI as failover) for display-ready recommendations JSON."""
     if not llm.is_available():
         return deterministic_recommendations, None
 
     try:
         analysis = await _build_ai_analysis(db, business_id, deterministic_recommendations)
         system = (
-            "You are an AI CFO for an Indian MSME. Return ONLY valid JSON matching "
-            "the supplied recommendation display schema. Base every recommendation "
-            "on the supplied calculated analysis and finance sections. Never invent "
-            "a number, customer, deadline or financial fact. Prioritise the most "
-            "material and actionable findings, avoid duplicates, and return 3 to 8 "
-            "recommendations when the data supports them."
+            "You are the Senior Chief Financial Officer (AI CFO) advising an Indian MSME. "
+            "Your mandate is to deliver high-impact, practical, and highly prioritized financial recommendations "
+            "covering 6 core pillars: (1) Cash Flow & Liquidity Optimization, (2) Revenue & Receivables Acceleration, "
+            "(3) Expense & Cost Reduction, (4) Debt & Working Capital Optimization, (5) Tax & GST Compliance, "
+            "and (6) Profit Margin Expansion.\n\n"
+            "STRICT RULES:\n"
+            "1. Return ONLY valid JSON matching the specified schema with a single root key 'recommendations'.\n"
+            "2. Ground every recommendation in the provided financial telemetry; never invent figures or dates.\n"
+            "3. Return 4 to 8 highly actionable, specific recommendations with clear step-by-step next actions.\n"
+            "4. Include realistic estimated INR impact values when applicable.\n"
+            "5. Do NOT include markdown text, notes, or commentary outside the JSON."
         )
         user = (
             f"User instruction:\n{prompt}\n\n"
-            f"Recommendation display schema:\n{json.dumps(_RECOMMENDATION_DISPLAY_SCHEMA)}\n\n"
-            "Trusted business data analysis (JSON):\n"
+            f"Recommendation display schema:\n{json.dumps(_RECOMMENDATION_DISPLAY_SCHEMA, indent=2)}\n\n"
+            "Trusted business data analysis (covering invoices, cash flow, gst, loans, expenses, transactions):\n"
             f"{json.dumps(analysis, default=str)}"
         )
         text, engine = await llm.complete_engine(
-            system, user, max_tokens=4096, temperature=0.1
+            system, user, max_tokens=4096, temperature=0.15
         )
         parsed = _extract_json_payload(text or "")
         generated = _normalise_ai_recommendations(parsed, business_id, now)
         if generated:
-            return generated, engine or llm.active_provider() or "ai"
-        logger.warning("Recommendation model returned no valid display-schema rows")
-    except Exception as exc:  # model failures must not break Generate
+            return generated, engine or llm.active_provider() or "gemini"
+        logger.warning("Recommendation model returned no valid display-schema rows; using deterministic fallback")
+    except Exception as exc:
         logger.warning("AI recommendation generation failed; using trusted fallback: %s", exc)
     return deterministic_recommendations, None
 
@@ -287,10 +317,9 @@ async def generate_summary_bullets(
 ) -> dict:
     """Produce AI-generated bullet-point sentences summarising all finance data.
 
-    The LLM receives the complete calculated analysis (metrics, health, risk,
-    loan-readiness, forecast) and every finance section (transactions, invoices,
-    expenses, GST, loans), then returns a list of natural-language sentences.
-    Falls back to deterministic bullets when no LLM is configured.
+    Google Gemini (or OpenAI failover) produces natural-language strategic summary
+    bullets covering capital allocation, revenue acceleration, and cost reduction.
+    Falls back to the deterministic engine when no LLM is configured or available.
     """
     now = now or utcnow()
     deterministic_recs = await generate_recommendations(db, business_id, now=now)
@@ -301,24 +330,25 @@ async def generate_summary_bullets(
 
     if llm.is_available():
         system = (
-            "You are an AI CFO for an Indian MSME. Analyse the supplied financial "
-            "data covering ALL sections — transactions, invoices, expenses, GST, "
-            "loans, cash flow, financial health, risk and loan readiness. "
-            "Return ONLY a JSON object with a single key \"bullets\" whose value is "
-            "an array of 6 to 12 concise, actionable sentences. Each sentence must "
-            "stand on its own, reference real numbers from the data, and cover a "
-            "different aspect of the business finances. Never invent figures. "
-            "Prioritise the most material findings first."
+            "You are the Senior Chief Financial Officer (AI CFO) for an Indian MSME. "
+            "Analyse the supplied financial data telemetry covering transactions, invoices, expenses, "
+            "GST, loans, cash flow forecast, financial health, risk, and loan readiness.\n\n"
+            "Return ONLY a JSON object with a single key 'bullets' containing an array of 6 to 10 "
+            "concise, actionable strategic sentences. Cover:\n"
+            "- Money Allocation (what to do with cash/surplus)\n"
+            "- Revenue & Receivables Acceleration (how to collect faster and grow revenue)\n"
+            "- Cost & Margin Optimization (cutting discretionary leakage)\n"
+            "- Debt & Tax Strategy (EMI optimization and GST compliance)\n\n"
+            "Every sentence must reference actual figures from the data. Never invent numbers."
         )
         user = (
-            "Generate a comprehensive financial summary as bullet-point sentences "
-            "covering every finance section (invoices, cash flow, GST, loans, "
-            "expenses and transactions).\n\n"
-            f"Trusted business data analysis (JSON):\n{json.dumps(analysis, default=str)}"
+            "Generate an executive financial summary as bullet-point strategic sentences "
+            "covering every dimension of the business ledgers.\n\n"
+            f"MSME Financial Telemetry:\n{json.dumps(analysis, default=str)}"
         )
         try:
             text, provider = await llm.complete_engine(
-                system, user, max_tokens=2048, temperature=0.2
+                system, user, max_tokens=2048, temperature=0.15
             )
             parsed = _extract_json_payload(text or "")
             if isinstance(parsed, dict):
@@ -332,7 +362,7 @@ async def generate_summary_bullets(
                 if s and len(s) >= 10:
                     bullets.append(s[:500])
             if bullets:
-                engine = provider or "ai"
+                engine = provider or "gemini"
         except Exception as exc:
             logger.warning("AI summary bullet generation failed; using deterministic fallback: %s", exc)
 
@@ -348,14 +378,14 @@ async def generate_summary_bullets(
 
 def _deterministic_summary_bullets(analysis: dict, recs: list[dict]) -> list[str]:
     """Build actionable financial recommendations on capital deployment, revenue growth, and cost savings."""
-    from app.utils.format import inr  # imported lazily to avoid cycle
+    from app.utils.format import inr
 
-    metrics = analysis.get("calculated_analysis", {}).get("metrics") or {}
-    health = analysis.get("calculated_analysis", {}).get("financial_health") or {}
-    risk = analysis.get("calculated_analysis", {}).get("risk_analysis") or {}
-    readiness = analysis.get("calculated_analysis", {}).get("loan_readiness") or {}
-    forecast = analysis.get("calculated_analysis", {}).get("cash_flow_forecast")
-    sections = analysis.get("finance_sections") or {}
+    telemetry = analysis.get("financial_telemetry", {})
+    metrics = telemetry.get("metrics") or {}
+    health = telemetry.get("financial_health") or {}
+    risk = telemetry.get("risk_analysis") or {}
+    readiness = telemetry.get("loan_readiness") or {}
+    forecast = telemetry.get("cash_flow_forecast")
 
     bullets: list[str] = []
 
@@ -446,18 +476,11 @@ async def generate_with_stats(
 ) -> tuple[list[dict], dict]:
     """Generate a fresh recommendation set and replace the previous set.
 
-    The candidates are fully produced and validated before MongoDB is touched.
-    Fresh rows are then inserted under a generation id and every older row for
-    the business is removed, so the page can only show the latest Generate
-    result.  An available LLM always receives the instruction (the caller's
-    ``prompt`` when supplied, otherwise the default instruction) plus the
-    complete calculated finance analysis and exact display schema. Invalid or
-    unavailable model output automatically falls back to the deterministic
-    candidates.
+    Runs Google Gemini (or OpenAI failover) with fallback to trusted deterministic rules.
+    Inserts fresh rows and removes previous generations cleanly.
     """
     now = now or utcnow()
     deterministic_recs = await generate_recommendations(db, business_id, now=now)
-    recs = deterministic_recs
     ai_engine: Optional[str] = None
     effective_prompt = (prompt or "").strip()
     prompt_applied = bool(effective_prompt)
@@ -470,9 +493,6 @@ async def generate_with_stats(
     generation_id = str(ObjectId())
     items: list[dict] = []
 
-    # Insert the complete new generation first. Only after every insert has
-    # succeeded do we remove rows from previous generations. If any write fails,
-    # remove this generation so a partial result can never leak into MongoDB.
     try:
         for recommendation in recs:
             rid = recommendation["_rid"]
@@ -499,7 +519,7 @@ async def generate_with_stats(
             await collection.delete_many(
                 {"business_id": business_id, "generation_id": generation_id}
             )
-        except Exception as cleanup_exc:  # pragma: no cover - database outage
+        except Exception as cleanup_exc:
             logger.error(
                 "Could not clean failed recommendation generation %s: %s",
                 generation_id,
@@ -508,7 +528,6 @@ async def generate_with_stats(
         raise
     items.sort(key=lambda item: _PRIORITY_ORDER.get(str(item.get("priority")), 9))
 
-    # Generate AI summary bullets alongside the recommendations
     summary_bullets: list[str] = []
     summary_engine = "deterministic"
     try:
@@ -553,7 +572,7 @@ async def list_recommendations(
     business_id: Any,
     *,
     page: int = 1,
-    limit: int = 20,
+    limit: int = 50,
     search: Optional[str] = None,
     priority: Optional[str] = None,
     status: Optional[str] = None,
@@ -573,7 +592,7 @@ async def list_recommendations(
         q["source_agent"] = source_agent
     if search:
         rx = {"$regex": search, "$options": "i"}
-        q["$or"] = [{"title": rx}, {"description": rx}]
+        q["$or"] = [{"title": rx}, {"description": rx}, {"recommended_action": rx}]
 
     collection = db[COLLECTIONS["recommendations"]]
     total = await collection.count_documents(q)
@@ -601,8 +620,7 @@ async def acknowledge(db: AsyncIOMotorDatabase, business_id: Any, rec_id: str) -
 
 
 async def complete(db: AsyncIOMotorDatabase, business_id: Any, rec_id: str) -> dict:
-    doc = await _set_status(db, business_id, rec_id, "completed")
-    return doc
+    return await _set_status(db, business_id, rec_id, "completed")
 
 
 async def dismiss(db: AsyncIOMotorDatabase, business_id: Any, rec_id: str) -> dict:

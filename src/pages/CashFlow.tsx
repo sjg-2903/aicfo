@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { TrendingUp, TrendingDown, Wallet, Activity } from 'lucide-react';
 import { Card, ChartCard, PageHeader, ErrorState } from '@/components/ui';
+import SegmentStepsGuide from '@/components/SegmentStepsGuide';
 import { CURRENCY, moneyTooltip } from '@/lib/format';
 import { getErrorMessage } from '@/lib/axios';
 import dashboardService from '@/services/dashboardService';
@@ -61,6 +62,9 @@ export default function CashFlow() {
   return (
     <div className="space-y-6">
       <PageHeader title="Cash Flow" subtitle="Historical performance and 30-day forecast" />
+
+      {/* Segment Steps Guide */}
+      <SegmentStepsGuide segment="cash-flow" defaultExpanded={false} />
 
       {/* KPI strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

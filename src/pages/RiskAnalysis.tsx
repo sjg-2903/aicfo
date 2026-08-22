@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ShieldAlert, AlertOctagon, AlertTriangle, Info, CheckCircle2 } from 'lucide-react';
 import { Card, PageHeader, Pill, ScoreRing, ErrorState } from '@/components/ui';
+import SegmentStepsGuide from '@/components/SegmentStepsGuide';
 import { useToast } from '@/components/Toast';
 import { CURRENCY } from '@/lib/format';
 import { getErrorMessage } from '@/lib/axios';
@@ -57,6 +58,9 @@ export default function RiskAnalysis() {
   return (
     <div className="space-y-6">
       <PageHeader title="Risk Analysis" subtitle="Identify, prioritize and resolve financial risks" />
+
+      {/* Segment Steps Guide */}
+      <SegmentStepsGuide segment="risk-analysis" defaultExpanded={false} />
 
       {error ? (
         <Card>

@@ -32,6 +32,7 @@ import {
 import { KPICard } from '@/components/KPICard';
 import { Card, ChartCard, PageHeader, ScoreRing, ErrorState } from '@/components/ui';
 import RecommendationsSummary from '@/components/RecommendationsSummary';
+import SegmentStepsGuide from '@/components/SegmentStepsGuide';
 import { CURRENCY, moneyTooltip } from '@/lib/format';
 import { getErrorMessage } from '@/lib/axios';
 import { shortMonth } from '@/lib/mappers';
@@ -112,6 +113,9 @@ export default function Dashboard() {
           </Link>
         }
       />
+
+      {/* Segment Steps Guide */}
+      <SegmentStepsGuide segment="dashboard" defaultExpanded={false} />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">

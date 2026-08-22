@@ -155,59 +155,59 @@ def test_provider_is_unavailable_without_api_key(monkeypatch):
     assert llm.is_available() is False
 
 
-def test_auto_provider_prefers_openai_then_gemini(monkeypatch):
+def test_auto_provider_prefers_gemini_then_openai(monkeypatch):
     monkeypatch.setattr(settings, "LLM_PROVIDER", "auto")
     monkeypatch.setattr(settings, "OPENAI_API_KEY", "openai-key")
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "gemini-key")
-    assert llm.active_provider() == "openai"
-
-    monkeypatch.setattr(settings, "OPENAI_API_KEY", None)
     assert llm.active_provider() == "gemini"
+
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", None)
+    assert llm.active_provider() == "openai"
 
 
 def test_explicit_provider_keeps_priority_with_configured_failover(monkeypatch):
-    monkeypatch.setattr(settings, "LLM_PROVIDER", "gemini")
+    monkeypatch.setattr(settings, "LLM_PROVIDER", "openai")
     monkeypatch.setattr(settings, "OPENAI_API_KEY", "openai-key")
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "gemini-key")
-    assert llm.configured_providers() == ["gemini", "openai"]
-    assert llm.active_provider() == "gemini"
+    assert llm.configured_providers() == ["openai", "gemini"]
+    assert llm.active_provider() == "openai"
 
     # When the preferred provider is not configured, the other one is used as
     # failover rather than going straight to deterministic output.
-    monkeypatch.setattr(settings, "GEMINI_API_KEY", None)
-    assert llm.configured_providers() == ["openai"]
-    assert llm.active_provider() == "openai"
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", None)
+    assert llm.configured_providers() == ["gemini"]
+    assert llm.active_provider() == "gemini"
 
 
-async def test_complete_fails_over_from_openai_to_gemini(monkeypatch):
+async def test_complete_fails_over_from_gemini_to_openai(monkeypatch):
     monkeypatch.setattr(settings, "LLM_PROVIDER", "auto")
     monkeypatch.setattr(settings, "OPENAI_API_KEY", "openai-key")
     monkeypatch.setattr(settings, "OPENAI_MODEL", "gpt-test")
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "gemini-key")
     monkeypatch.setattr(settings, "GEMINI_MODEL", "gemini-test")
     monkeypatch.setattr(settings, "LLM_MAX_RETRIES", 0)
-    request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
+    request = httpx.Request("POST", "https://generativelanguage.googleapis.com")
     response = httpx.Response(401, request=request)
     calls = []
 
-    async def openai_fails(*args, **kwargs):
-        calls.append(("openai", args))
+    async def gemini_fails(*args, **kwargs):
+        calls.append(("gemini", args))
         raise httpx.HTTPStatusError("unauthorized", request=request, response=response)
 
-    async def gemini_succeeds(provider, payload, timeout):
-        calls.append(("gemini", (provider, payload, timeout)))
-        return {"candidates": [{"content": {"parts": [{"text": "Gemini fallback answer"}]}}]}
+    async def openai_succeeds(provider, payload, timeout):
+        calls.append(("openai", (provider, payload, timeout)))
+        return {"choices": [{"message": {"content": "OpenAI fallback answer"}}]}
 
     async def fake_request(provider, payload, timeout):
-        if provider == "openai":
-            return await openai_fails(provider, payload, timeout)
-        return await gemini_succeeds(provider, payload, timeout)
+        if provider == "gemini":
+            return await gemini_fails(provider, payload, timeout)
+        return await openai_succeeds(provider, payload, timeout)
 
     monkeypatch.setattr(llm, "_request_json", fake_request)
     text, provider = await llm.complete_engine("System", "User")
-    assert text == "Gemini fallback answer"
-    assert provider == "gemini"
-    assert [name for name, _ in calls] == ["openai", "gemini"]
+    assert text == "OpenAI fallback answer"
+    assert provider == "openai"
+    assert [name for name, _ in calls] == ["gemini", "openai"]
 
 
 async def test_complete_does_not_fall_through_when_no_provider_configured(monkeypatch):

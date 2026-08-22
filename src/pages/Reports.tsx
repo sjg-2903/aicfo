@@ -13,6 +13,7 @@ import {
   History as HistoryIcon,
 } from 'lucide-react';
 import { Card, PageHeader, ErrorState, EmptyState } from '@/components/ui';
+import SegmentStepsGuide from '@/components/SegmentStepsGuide';
 import { useToast } from '@/components/Toast';
 import { CURRENCY } from '@/lib/format';
 import { getErrorMessage } from '@/lib/axios';
@@ -148,6 +149,9 @@ export default function Reports() {
   return (
     <div className="space-y-6">
       <PageHeader title="Reports" subtitle="Generate, download and manage professional PDF reports" />
+
+      {/* Segment Steps Guide */}
+      <SegmentStepsGuide segment="reports" defaultExpanded={false} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Report configuration */}

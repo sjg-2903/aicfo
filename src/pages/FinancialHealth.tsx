@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ThumbsUp, ThumbsDown, TrendingUp, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, ChartCard, PageHeader, Pill, ScoreRing, ProgressBar, ErrorState } from '@/components/ui';
+import SegmentStepsGuide from '@/components/SegmentStepsGuide';
 import { CURRENCY } from '@/lib/format';
 import { getErrorMessage } from '@/lib/axios';
 import dashboardService from '@/services/dashboardService';
@@ -18,6 +19,9 @@ export default function FinancialHealth() {
   return (
     <div className="space-y-6">
       <PageHeader title="Financial Health" subtitle="Detailed analysis of your business's financial condition" />
+
+      {/* Segment Steps Guide */}
+      <SegmentStepsGuide segment="financial-health" defaultExpanded={false} />
 
       {error ? (
         <Card>

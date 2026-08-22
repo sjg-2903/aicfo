@@ -129,11 +129,11 @@ export default function RecommendationsSummary({ embedded = false }: Recommendat
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-1 text-xs text-slate-500 dark:text-slate-400">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 dark:bg-blue-900/30 px-2.5 py-1 font-medium text-blue-700 dark:text-blue-300">
                 <Sparkles className="h-3.5 w-3.5" />
-                {summary.engine === 'openai'
-                  ? 'AI CFO (OpenAI)'
-                  : summary.engine === 'gemini'
-                    ? 'AI CFO (Google Gemini)'
-                    : 'AI CFO Advisory'}
+                {summary.engine === 'gemini'
+                  ? 'AI CFO (Google Gemini)'
+                  : summary.engine === 'openai'
+                    ? 'AI CFO (OpenAI)'
+                    : 'AI CFO Telemetry Engine'}
               </span>
               {summary.generatedAt && (
                 <span className="text-slate-400 dark:text-slate-500">

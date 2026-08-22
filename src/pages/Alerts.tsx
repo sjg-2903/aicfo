@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Bell, AlertOctagon, AlertTriangle, Info } from 'lucide-react';
 import { Card, PageHeader, Pill, ErrorState } from '@/components/ui';
+import SegmentStepsGuide from '@/components/SegmentStepsGuide';
 import { useToast } from '@/components/Toast';
 import { getErrorMessage } from '@/lib/axios';
 import alertService from '@/services/alertService';
@@ -44,6 +45,9 @@ export default function Alerts() {
   return (
     <div className="space-y-6">
       <PageHeader title="Alerts" subtitle="Financial alerts and notifications" />
+
+      {/* Segment Steps Guide */}
+      <SegmentStepsGuide segment="alerts" defaultExpanded={false} />
 
       <div className="flex gap-2">
         {(['all', 'unread', 'read'] as const).map((f) => (

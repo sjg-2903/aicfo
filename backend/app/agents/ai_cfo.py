@@ -1,9 +1,9 @@
 """AI CFO agent — chat, analysis and recommendations.
 
 All numbers come from deterministic analytics engines and are never invented.
-OpenAI and Google Gemini are given priority for explaining those trusted
-calculations, summarising insights, and answering chat questions — OpenAI first,
-then Gemini as failover — and deterministic explanations are used only when no
+Google Gemini and OpenAI are given priority for explaining those trusted
+calculations, summarising insights, and answering chat questions — Gemini first,
+then OpenAI as failover — and deterministic explanations are used only when no
 provider is configured or every provider attempt fails.
 """
 

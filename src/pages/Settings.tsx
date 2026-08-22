@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Bell, Globe, Palette, Save } from 'lucide-react';
+import { Bell, Globe, Palette, Save, BrainCircuit, Sparkles, Check } from 'lucide-react';
 import { Card, PageHeader } from '@/components/ui';
+import SegmentStepsGuide from '@/components/SegmentStepsGuide';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/utils/cn';
 
@@ -33,6 +34,7 @@ export default function Settings() {
     smsAlerts: false,
     riskAlerts: true,
     weeklyDigest: true,
+    aiEngine: 'gemini', // 'gemini' | 'openai'
     theme: theme || 'light',
     currency: 'INR',
     timezone: 'Asia/Kolkata',
@@ -66,7 +68,80 @@ export default function Settings() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <PageHeader title="Settings" subtitle="Configure preferences and notifications" />
+      <PageHeader title="Settings" subtitle="Configure preferences, AI models and notifications" />
+
+      {/* Segment Steps Guide */}
+      <SegmentStepsGuide segment="settings" defaultExpanded={false} />
+
+      {/* AI Model Intelligence Config */}
+      <Card className="p-6 border-blue-100 dark:border-slate-800">
+        <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+          <BrainCircuit className="w-5 h-5 text-blue-600 dark:text-blue-400" /> AI Narrative &amp; Recommendation Engine
+        </h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+          Select the primary artificial intelligence provider for conversational chat, file extraction, and strategic recommendations.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <button
+            type="button"
+            onClick={() => update('aiEngine', 'gemini')}
+            className={`p-4 rounded-xl border text-left transition cursor-pointer ${
+              settings.aiEngine === 'gemini'
+                ? 'border-blue-600 bg-blue-50/60 dark:bg-blue-950/30 ring-2 ring-blue-500/20'
+                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:border-slate-300'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-blue-600" /> Google Gemini 2.5 Flash
+              </span>
+              {settings.aiEngine === 'gemini' && (
+                <span className="p-0.5 rounded-full bg-blue-600 text-white">
+                  <Check className="w-3.5 h-3.5" />
+                </span>
+              )}
+            </div>
+            <span className="inline-block text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full mb-1.5">
+              Default Primary (Fast &amp; Multimodal)
+            </span>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Ultra-fast latency, high multimodal capacity for invoice/bill image review, and deep reasoning over Indian MSME ledgers.
+            </p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => update('aiEngine', 'openai')}
+            className={`p-4 rounded-xl border text-left transition cursor-pointer ${
+              settings.aiEngine === 'openai'
+                ? 'border-blue-600 bg-blue-50/60 dark:bg-blue-950/30 ring-2 ring-blue-500/20'
+                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:border-slate-300'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <BrainCircuit className="w-4 h-4 text-indigo-600" /> OpenAI GPT-4.1 Mini
+              </span>
+              {settings.aiEngine === 'openai' && (
+                <span className="p-0.5 rounded-full bg-blue-600 text-white">
+                  <Check className="w-3.5 h-3.5" />
+                </span>
+              )}
+            </div>
+            <span className="inline-block text-[10px] font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950/50 px-2 py-0.5 rounded-full mb-1.5">
+              Secondary Failover
+            </span>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              High precision narrative generation and structured JSON parsing. Used as automatic failover.
+            </p>
+          </button>
+        </div>
+
+        <p className="text-[11px] text-slate-400 dark:text-slate-500">
+          * AI providers only receive already-calculated financial telemetry. Core calculations, ratios, and risk formulas run deterministically in backend Python.
+        </p>
+      </Card>
 
       {/* Notifications */}
       <Card className="p-6">
@@ -177,3 +252,4 @@ function SettingRow({ label, desc, children }: { label: string; desc: string; ch
     </div>
   );
 }
+

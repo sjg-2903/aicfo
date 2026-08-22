@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, CheckCircle2, Upload } from 'lucide-react';
 import { Card, PageHeader, Pill, ErrorState } from '@/components/ui';
+import SegmentStepsGuide from '@/components/SegmentStepsGuide';
 import { EntityFormModal, type FieldDef, type FormValues } from '@/components/EntityFormModal';
 import { RowActions } from '@/components/RowActions';
 import UploadWizard from '@/components/UploadWizard';
@@ -159,6 +160,9 @@ export default function Invoices() {
           </>
         }
       />
+
+      {/* Segment Steps Guide */}
+      <SegmentStepsGuide segment="invoices" defaultExpanded={false} />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Stat label="Total Outstanding" value={outstandingTotal} tone="text-blue-600 dark:text-blue-400" />
