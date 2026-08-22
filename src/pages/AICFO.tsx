@@ -153,6 +153,9 @@ export default function AICFO() {
       const reply = await aiCfoService.sendMessage(effectiveMessage, sessionId, file || undefined);
       if (requestEpoch !== conversationEpochRef.current) return;
       setSessionId(reply.sessionId);
+      if (reply.isFallback) {
+        addToast('AI API unavailable. Showing a deterministic fallback response.', 'error');
+      }
       stickToBottomRef.current = true;
       setMessages((prev) => [
         ...prev,

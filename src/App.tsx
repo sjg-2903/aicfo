@@ -5,7 +5,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import LoadingPage from '@/components/LoadingPage';
-import { useToast, ToastContainer } from '@/components/Toast';
+import { ToastProvider } from '@/components/Toast';
 import AppLayout from '@/components/layout/AppLayout';
 
 // Pages - lazy loaded for better performance
@@ -47,8 +47,6 @@ function PageLoader() {
 }
 
 const AppContent = () => {
-  const { toasts, removeToast } = useToast();
-
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
@@ -91,7 +89,6 @@ const AppContent = () => {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
-        <ToastContainer toasts={toasts} onClose={removeToast} />
       </BrowserRouter>
     </QueryClientProvider>
   );
@@ -100,9 +97,11 @@ const AppContent = () => {
 export default function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </ToastProvider>
     </ThemeProvider>
   );
 }

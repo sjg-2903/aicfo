@@ -1,8 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { AlertCircle, CheckCircle, AlertTriangle, Info, X } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
+
+interface ToastItem {
+  id: string;
+  message: string;
+  type: ToastType;
+}
 
 interface ToastProps {
   id: string;
@@ -62,8 +68,9 @@ export const Toast: React.FC<ToastProps> = ({
 
   return (
     <div
+      role={type === 'error' ? 'alert' : 'status'}
       className={cn(
-        'flex items-center gap-3 p-4 rounded-lg border',
+        'flex items-center gap-3 p-4 rounded-lg border shadow-lg',
         'animate-in slide-in-from-top-2 fade-in duration-300',
         config.bg,
         config.text,
@@ -73,8 +80,10 @@ export const Toast: React.FC<ToastProps> = ({
       <Icon className={cn('w-5 h-5 flex-shrink-0', config.iconColor)} />
       <p className="flex-1 text-sm font-medium">{message}</p>
       <button
+        type="button"
         onClick={() => onClose(id)}
         className="p-1 hover:bg-black/10 rounded transition-colors"
+        aria-label="Dismiss notification"
       >
         <X className="w-4 h-4" />
       </button>
@@ -82,41 +91,52 @@ export const Toast: React.FC<ToastProps> = ({
   );
 };
 
-// Toast container for displaying multiple toasts
 interface ToastContainerProps {
-  toasts: Array<{ id: string; message: string; type: ToastType }>;
+  toasts: ToastItem[];
   onClose: (id: string) => void;
 }
 
-export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onClose }) => {
-  return (
-    <div className="fixed bottom-4 right-4 z-50 space-y-2 max-w-md">
-      {toasts.map((toast) => (
-        <Toast
-          key={toast.id}
-          id={toast.id}
-          message={toast.message}
-          type={toast.type}
-          onClose={onClose}
-        />
-      ))}
-    </div>
-  );
+export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onClose }) => (
+  <div className="fixed bottom-4 right-4 z-[100] space-y-2 w-[calc(100%-2rem)] max-w-md" aria-live="polite">
+    {toasts.map((toast) => (
+      <Toast key={toast.id} {...toast} onClose={onClose} />
+    ))}
+  </div>
+);
+
+type ToastContextValue = {
+  addToast: (message: string, type?: ToastType) => string;
+  removeToast: (id: string) => void;
 };
 
-// Hook for managing toasts
-export const useToast = () => {
-  const [toasts, setToasts] = React.useState<Array<{ id: string; message: string; type: ToastType }>>([]);
+const ToastContext = createContext<ToastContextValue | null>(null);
 
-  const addToast = (message: string, type: ToastType = 'info') => {
-    const id = Math.random().toString(36).substr(2, 9);
+/** A single application-wide toast store so notifications raised by any page are visible. */
+export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const addToast = useCallback((message: string, type: ToastType = 'info') => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     setToasts((prev) => [...prev, { id, message, type }]);
     return id;
-  };
+  }, []);
 
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
 
-  return { toasts, addToast, removeToast };
+  const value = useMemo(() => ({ addToast, removeToast }), [addToast, removeToast]);
+
+  return (
+    <ToastContext.Provider value={value}>
+      {children}
+      <ToastContainer toasts={toasts} onClose={removeToast} />
+    </ToastContext.Provider>
+  );
+}
+
+export const useToast = () => {
+  const context = useContext(ToastContext);
+  if (!context) throw new Error('useToast must be used within a ToastProvider');
+  return context;
 };

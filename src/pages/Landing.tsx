@@ -315,9 +315,9 @@ export default function Landing() {
               transition={{ delay: 0.15, duration: 0.7, ease: EASE_OUT }}
               className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.1]"
             >
-              Your Autonomous{' '}
+              AI CFO Financial Adviser For{' '}
               <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-violet-400 bg-clip-text text-transparent">
-                AI Chief Financial Officer
+                MSMEs
               </span>
             </motion.h1>
 
@@ -345,7 +345,7 @@ export default function Landing() {
                   to="/register"
                   className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white rounded-2xl font-bold text-base transition shadow-xl shadow-blue-500/25 ring-1 ring-white/20"
                 >
-                  <span>Start Free 14-Day Trial</span>
+                  <span>Explore Live Demo</span>
                   <ArrowRight className="w-5 h-5" />
                 </Link>
               </motion.span>
@@ -1091,7 +1091,7 @@ export default function Landing() {
                   'Audit-Ready PDF Report Exports',
                   '5 Team Member Accounts',
                 ],
-                cta: 'Start 14-Day Free Trial',
+                cta: 'Explore Live Demo',
               },
               {
                 name: 'Enterprise',
