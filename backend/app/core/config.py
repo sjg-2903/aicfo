@@ -32,17 +32,22 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # ── xAI Grok (optional narrative layer) ─────────────────────────────────
-    # Grok is intentionally used only to explain / summarize trusted backend
+    # ── AWS Bedrock (optional narrative layer) ─────────────────────────────
+    # Bedrock is intentionally used only to explain / summarize trusted backend
     # output and to answer chat requests. Financial calculations, forecasts,
     # risk scoring and deterministic recommendation rules remain in Python.
-    # When no XAI_API_KEY is configured, callers fall back to deterministic
-    # explanations generated from the same calculated data.
-    XAI_API_KEY: Optional[str] = None
-    XAI_BASE_URL: str = "https://api.x.ai/v1"
-    XAI_MODEL: str = "grok-4.6"
-    XAI_TIMEOUT_SECONDS: float = Field(default=90.0, ge=5.0, le=3600.0)
-    XAI_MAX_RETRIES: int = Field(default=2, ge=0, le=5)
+    # Credentials follow boto3's standard chain: explicit keys below, a named
+    # AWS_PROFILE, or an attached IAM role. When no credentials resolve,
+    # callers fall back to deterministic explanations generated from the same
+    # calculated data. See AWS_BEDROCK_SETUP.md for the full walkthrough.
+    AWS_ACCESS_KEY_ID: Optional[str] = None
+    AWS_SECRET_ACCESS_KEY: Optional[str] = None
+    AWS_SESSION_TOKEN: Optional[str] = None  # only for temporary credentials (SSO / assumed roles)
+    AWS_PROFILE: Optional[str] = None  # use a profile from ~/.aws/credentials instead of keys
+    AWS_REGION: str = "us-east-1"
+    BEDROCK_MODEL_ID: str = "anthropic.claude-sonnet-4-20250514-v1:0"
+    BEDROCK_TIMEOUT_SECONDS: float = Field(default=90.0, ge=5.0, le=3600.0)
+    BEDROCK_MAX_RETRIES: int = Field(default=2, ge=0, le=5)
 
     # ── CORS / security ────────────────────────────────────────────────────
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"

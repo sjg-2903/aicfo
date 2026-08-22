@@ -67,7 +67,7 @@ const formatFileSize = (bytes: number) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-const engineLabel = (engine?: string) => (engine === 'grok' ? 'Grok' : 'Financial analysis');
+const engineLabel = (engine?: string) => (engine === 'bedrock' ? 'AI CFO (AWS Bedrock)' : 'Financial analysis');
 
 export default function AICFO() {
   const { addToast } = useToast();
@@ -208,7 +208,7 @@ export default function AICFO() {
             <div className="flex items-center gap-1.5">
               <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500 animate-pulse" />
               <span className="truncate text-xs text-slate-500">
-                Grounded in your business data with Grok explanations when configured
+                Grounded in your business data with AWS Bedrock explanations when configured
               </span>
             </div>
           </div>

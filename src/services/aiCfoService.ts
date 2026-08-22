@@ -2,8 +2,8 @@ import apiClient from '@/lib/axios';
 
 /**
  * AI CFO Service — backed by FastAPI.
- * Grok is invoked only by the backend for grounded explanations and chat; the
- * browser never receives or stores an xAI key.
+ * AWS Bedrock is invoked only by the backend for grounded explanations and
+ * chat; the browser never receives or stores AWS credentials.
  *
  *  - POST /api/ai-cfo/chat | /chat/file
  *  - POST /api/ai-cfo/analyze | /recommend
@@ -24,7 +24,7 @@ export interface AnalyzeResult {
   loanReadiness: { readiness_score: number; label: string };
 }
 
-// The backend may make several bounded Grok attempts before returning a
+// The backend may make several bounded Bedrock attempts before returning a
 // deterministic fallback, so the browser timeout must outlive that server-side
 // resilience window.
 const CHAT_TIMEOUT_MS = 420_000;

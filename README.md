@@ -15,7 +15,7 @@ A professional, production-ready fintech frontend application built with React, 
 - **Cash Flow Analysis**: Historical and forecasted cash flow visualization
 - **Risk Analysis**: Identify and monitor financial risks
 - **Loan Readiness**: Assess readiness for business financing
-- **AI CFO Assistant**: Grounded financial chat with optional Grok explanations and a deterministic fallback
+- **AI CFO Assistant**: Grounded financial chat with optional AWS Bedrock explanations and a deterministic fallback
 - **Recommendations**: Complete, actionable financial summary shared between Dashboard and Recommendations
 - **Alerts & Notifications**: Real-time financial alerts
 - **Reports**: Generate comprehensive financial reports
@@ -134,10 +134,10 @@ cp .env.example .env
 VITE_API_BASE_URL=http://localhost:8000
 ```
 
-### Enable Grok-powered explanations (optional)
+### Enable AWS Bedrock-powered explanations (optional)
 
-The frontend never needs an AI-provider key. Configure xAI Grok in the backend
-instead:
+The frontend never needs an AI-provider key. Configure Amazon Bedrock in the
+backend instead:
 
 ```bash
 cd backend
@@ -146,18 +146,22 @@ cp .env.example .env
 
 ```env
 # backend/.env
-XAI_API_KEY=your_xai_key_here
-XAI_BASE_URL=https://api.x.ai/v1
-XAI_MODEL=grok-4.6
-XAI_TIMEOUT_SECONDS=90
-XAI_MAX_RETRIES=2
+AWS_ACCESS_KEY_ID=your_access_key_id
+AWS_SECRET_ACCESS_KEY=your_secret_access_key
+AWS_REGION=us-east-1
+BEDROCK_MODEL_ID=anthropic.claude-sonnet-4-20250514-v1:0
+BEDROCK_TIMEOUT_SECONDS=90
+BEDROCK_MAX_RETRIES=2
 ```
 
-Create the key in the [xAI Console](https://console.x.ai/), then restart the
-FastAPI service. Grok is used only for grounded explanations, summaries,
-insights and AI CFO chat responses. Financial calculations and recommendation
-rules remain deterministic; if the key is omitted or Grok is unavailable, the
-app automatically uses its deterministic explanation fallback. The AI CFO
+You need an AWS account, model access enabled in the Bedrock console, and an
+IAM access key — the full step-by-step walkthrough (including the
+least-privilege IAM policy, model ID options, and troubleshooting) is in
+[AWS_BEDROCK_SETUP.md](AWS_BEDROCK_SETUP.md). Then restart the FastAPI
+service. Bedrock is used only for grounded explanations, summaries, insights
+and AI CFO chat responses. Financial calculations and recommendation rules
+remain deterministic; if credentials are omitted or Bedrock is unavailable,
+the app automatically uses its deterministic explanation fallback. The AI CFO
 chat supports file understanding, but image generation is intentionally not
 included.
 

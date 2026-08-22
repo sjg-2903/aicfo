@@ -37,7 +37,7 @@ app = FastAPI(
         "Production REST API for the AI CFO & Financial Advisor for MSMEs — "
         "authentication, multi-tenant financial data, deterministic financial "
         "health, forecasting, risk analysis, loan readiness, recommendations, "
-        "alerts, CSV import and Grok-powered AI CFO explanations."
+        "alerts, CSV import and AWS Bedrock-powered AI CFO explanations."
     ),
     version="1.0.0",
     lifespan=lifespan,
