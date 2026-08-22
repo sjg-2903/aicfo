@@ -83,6 +83,7 @@ async def generate(
     return ok(
         {
             "recommendations": recs,
+            "engine": stats.get("engine", "deterministic"),
             "summary_bullets": stats.get("summary_bullets", []),
             "summary_engine": stats.get("summary_engine", "deterministic"),
         },

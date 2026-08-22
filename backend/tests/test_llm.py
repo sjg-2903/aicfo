@@ -165,11 +165,58 @@ def test_auto_provider_prefers_openai_then_gemini(monkeypatch):
     assert llm.active_provider() == "gemini"
 
 
-def test_explicit_provider_does_not_fall_through(monkeypatch):
-    monkeypatch.setattr(settings, "LLM_PROVIDER", "openai")
-    monkeypatch.setattr(settings, "OPENAI_API_KEY", None)
+def test_explicit_provider_keeps_priority_with_configured_failover(monkeypatch):
+    monkeypatch.setattr(settings, "LLM_PROVIDER", "gemini")
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", "openai-key")
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "gemini-key")
-    assert llm.active_provider() is None
+    assert llm.configured_providers() == ["gemini", "openai"]
+    assert llm.active_provider() == "gemini"
+
+    # When the preferred provider is not configured, the other one is used as
+    # failover rather than going straight to deterministic output.
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", None)
+    assert llm.configured_providers() == ["openai"]
+    assert llm.active_provider() == "openai"
+
+
+async def test_complete_fails_over_from_openai_to_gemini(monkeypatch):
+    monkeypatch.setattr(settings, "LLM_PROVIDER", "auto")
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", "openai-key")
+    monkeypatch.setattr(settings, "OPENAI_MODEL", "gpt-test")
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "gemini-key")
+    monkeypatch.setattr(settings, "GEMINI_MODEL", "gemini-test")
+    monkeypatch.setattr(settings, "LLM_MAX_RETRIES", 0)
+    request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
+    response = httpx.Response(401, request=request)
+    calls = []
+
+    async def openai_fails(*args, **kwargs):
+        calls.append(("openai", args))
+        raise httpx.HTTPStatusError("unauthorized", request=request, response=response)
+
+    async def gemini_succeeds(provider, payload, timeout):
+        calls.append(("gemini", (provider, payload, timeout)))
+        return {"candidates": [{"content": {"parts": [{"text": "Gemini fallback answer"}]}}]}
+
+    async def fake_request(provider, payload, timeout):
+        if provider == "openai":
+            return await openai_fails(provider, payload, timeout)
+        return await gemini_succeeds(provider, payload, timeout)
+
+    monkeypatch.setattr(llm, "_request_json", fake_request)
+    text, provider = await llm.complete_engine("System", "User")
+    assert text == "Gemini fallback answer"
+    assert provider == "gemini"
+    assert [name for name, _ in calls] == ["openai", "gemini"]
+
+
+async def test_complete_does_not_fall_through_when_no_provider_configured(monkeypatch):
+    monkeypatch.setattr(settings, "LLM_PROVIDER", "auto")
+    monkeypatch.setattr(settings, "OPENAI_API_KEY", None)
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", None)
+    text, provider = await llm.complete_engine("System", "User")
+    assert text is None
+    assert provider is None
 
 
 def test_provider_keys_are_sent_in_headers_not_urls(monkeypatch):

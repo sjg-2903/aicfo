@@ -152,7 +152,7 @@ async def _ai_summary(data: dict) -> str:
             ],
         }
         try:
-            summary = await llm.complete(
+            summary, _ = await llm.complete_engine(
                 "You write executive summaries for MSME financial reports. Use only the "
                 "numbers provided. Be factual, specific and concise (3-5 sentences).",
                 f"Report data (JSON):\n{json.dumps(context, default=str)}",

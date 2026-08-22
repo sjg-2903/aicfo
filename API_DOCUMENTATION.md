@@ -1394,10 +1394,13 @@ Get detailed readiness factors.
 ## AI CFO Endpoints
 
 The AI CFO is grounded in the authenticated business's calculated financial
-context. OpenAI and Google Gemini are optional narrative providers used only for
-explanations, summaries, insights, chat, and image understanding. The backend
-falls back to deterministic output when no provider key is configured or a
-request fails. Financial calculations, forecasts, risk scores, and deterministic
+context. OpenAI and Google Gemini are narrative providers used for
+explanations, summaries, insights, chat, and image understanding and are given
+priority over deterministic output: OpenAI is tried first, then Gemini as a
+failover, and the deterministic engine is used only when no provider key is
+configured or every provider attempt fails. Each response reports which engine
+produced it via an `engine` field (`openai | gemini | deterministic`).
+Financial calculations, forecasts, risk scores, and deterministic
 recommendation rules are never delegated to a provider. See
 [AI_PROVIDER_SETUP.md](AI_PROVIDER_SETUP.md) for configuration.
 
@@ -1463,13 +1466,17 @@ The response has the same shape as `/chat` plus safe attachment metadata:
 
 ### POST /api/ai-cfo/analyze
 
-Return the deterministic calculated analysis and a narrative summary for the
-current business.
+Return the calculated analysis plus an AI-generated narrative summary for the
+current business. The response includes `engine` (`openai | gemini |
+deterministic`) so callers can see which engine produced the narrative; the
+deterministic narrative is used only when every configured AI provider fails.
 
 ### POST /api/ai-cfo/recommend
 
-Return deterministic recommendations and an explanatory narrative for the
-current business.
+Return AI-first recommendations, summary bullets, and an explanatory narrative
+for the current business. OpenAI is tried first, Gemini second, and the
+deterministic rules only when both providers fail. The response includes
+`engine`, `summary_bullets`, and `summary_engine`.
 
 There is intentionally no image-generation endpoint in the AI CFO API.
 
@@ -1478,9 +1485,21 @@ There is intentionally no image-generation endpoint in the AI CFO API.
 ### GET /api/recommendations/summary
 
 Return the complete financial-summary bullet list used by both Dashboard and the
-Recommendations page. This is the single shared recommendation-summary source;
-deterministic rules generate the underlying findings and the configured provider may only
-improve natural-language insights when configured.
+Recommendations page. This is the single shared recommendation-summary source.
+The response includes an `engine` field; the AI provider (OpenAI first, Gemini
+second) generates the bullets whenever it is configured and returns valid
+output, and deterministic rules are used only as the safety net.
+
+### POST /api/recommendations/generate
+
+Generate a fresh recommendation set and replace the previous set. The request
+body accepts an optional `prompt` (defaults to a built-in instruction asking
+for recommendations across invoices, cash flow, GST, loans, expenses and
+transactions). An available AI provider always receives the instruction plus
+the complete calculated finance analysis and the display schema — OpenAI first,
+Gemini as failover. The response includes the generated rows plus `engine`,
+`summary_bullets`, and `summary_engine`, so callers can tell whether the output
+came from OpenAI, Gemini, or the deterministic fallback.
 
 ### GET /api/recommendations
 Get recommendations with pagination and filtering.

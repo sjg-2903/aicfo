@@ -1,9 +1,10 @@
 # OpenAI or Google Gemini setup
 
-The AI CFO can use **OpenAI** or **Google Gemini** for grounded explanations,
-summary text, recommendations, chat, and image understanding. The provider is
-optional: all financial calculations and rules continue to work through the
-trusted deterministic Python engines when no API key is configured.
+The AI CFO uses **OpenAI** and **Google Gemini** for grounded explanations,
+summary text, recommendations, chat, and image understanding. AI output is
+given priority over deterministic data: OpenAI is tried first, then Gemini as
+a failover, and the trusted deterministic Python engines are used only when no
+API key is configured or every provider attempt fails.
 
 ## Data and security model
 
@@ -13,8 +14,16 @@ trusted deterministic Python engines when no API key is configured.
   provider's data-processing and retention terms before enabling it.
 - The provider explains already-calculated results. It does not own financial
   metrics, forecasts, health/risk scores, or deterministic rules.
+- Attempt order is **OpenAI → Gemini → deterministic**. When both keys are
+  configured, a failed or unusable OpenAI response is followed by Gemini, so a
+  single provider outage does not silently degrade the app to deterministic
+  output.
 - Provider failures, timeouts, rate limits, and malformed responses fall back
-  to deterministic output instead of failing the finance workflow.
+  to the next provider, then to deterministic output, instead of failing the
+  finance workflow.
+- Chat, analysis, recommendations (rows + summary bullets) and PDF narratives
+  all use this AI-first order; the response `engine` field reports which
+  provider produced the output.
 - Attached images are sent only for image understanding. This app does not
   expose provider image generation.
 
@@ -63,10 +72,12 @@ You can use:
 LLM_PROVIDER=auto
 ```
 
-In `auto` mode, the backend uses OpenAI when `OPENAI_API_KEY` is configured;
-otherwise it uses Gemini when `GEMINI_API_KEY` is configured. If both keys are
-present, OpenAI is selected. For predictable production behavior, explicitly
-set `LLM_PROVIDER=openai` or `LLM_PROVIDER=gemini`.
+In `auto` mode, the backend tries OpenAI first, then Gemini, then the
+deterministic fallback. If both keys are present and OpenAI fails (quota,
+auth, timeout, malformed response), Gemini is tried next. Setting
+`LLM_PROVIDER=openai` or `LLM_PROVIDER=gemini` moves that provider to the
+front and keeps the other configured provider as failover, still before any
+deterministic output.
 
 ## Docker Compose
 

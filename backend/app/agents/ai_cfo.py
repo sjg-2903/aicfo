@@ -1,9 +1,10 @@
 """AI CFO agent — chat, analysis and recommendations.
 
-All numbers come from deterministic analytics engines. OpenAI or Google Gemini is
-used only to explain those trusted calculations, summarize insights, and answer
-chat questions; without a provider API key the agent produces deterministic
-explanations from the same context.
+All numbers come from deterministic analytics engines and are never invented.
+OpenAI and Google Gemini are given priority for explaining those trusted
+calculations, summarising insights, and answering chat questions — OpenAI first,
+then Gemini as failover — and deterministic explanations are used only when no
+provider is configured or every provider attempt fails.
 """
 
 import json
@@ -280,6 +281,7 @@ async def chat(
     ctx = await build_context(db, business_id)
 
     answer = None
+    answer_engine: Optional[str] = None
     response_engine = "deterministic"
     if llm.is_available():
         attachment_context = ""
@@ -297,16 +299,18 @@ async def chat(
             "provided financial figures and clearly distinguish file data from stored business data."
         )
         if attachment and attachment.get("kind") == "image":
-            answer = await llm.complete_vision(
+            answer, answer_engine = await llm.complete_vision_engine(
                 SYSTEM_PROMPT,
                 user_prompt,
                 attachment["image_bytes"],
                 attachment.get("content_type") or "image/png",
             )
         else:
-            answer = await llm.complete(SYSTEM_PROMPT, user_prompt, max_tokens=2048)
+            answer, answer_engine = await llm.complete_engine(
+                SYSTEM_PROMPT, user_prompt, max_tokens=2048
+            )
         if answer:
-            response_engine = llm.active_provider() or "ai"
+            response_engine = answer_engine or "ai"
     if not answer:
         answer = (
             _deterministic_attachment_answer(message, ctx, attachment)
@@ -343,6 +347,22 @@ async def chat(
 
 async def analyze(db: AsyncIOMotorDatabase, business_id: Any) -> dict:
     ctx = await build_context(db, business_id)
+    narrative = _deterministic_answer("summary", ctx)
+    engine = "deterministic"
+    if llm.is_available():
+        user_prompt = (
+            "Business financial context (JSON):\n"
+            f"{json.dumps(ctx, default=str)}\n\n"
+            "Write a concise, grounded executive narrative for this MSME. Use only "
+            "the supplied figures; never invent amounts, scores or dates. "
+            "Summarise the most material findings and give 2-3 practical next steps."
+        )
+        ai_narrative, ai_engine = await llm.complete_engine(
+            SYSTEM_PROMPT, user_prompt, max_tokens=1024, temperature=0.2
+        )
+        if ai_narrative:
+            narrative = ai_narrative
+            engine = ai_engine or "ai"
     return {
         "generated_at": utcnow(),
         "metrics": ctx["metrics"],
@@ -350,18 +370,22 @@ async def analyze(db: AsyncIOMotorDatabase, business_id: Any) -> dict:
         "risk": ctx["risk"],
         "loan_readiness": ctx["loan_readiness"],
         "forecast": ctx["forecast"],
-        "narrative": _deterministic_answer("summary", ctx),
+        "narrative": narrative,
+        "engine": engine,
     }
 
 
 async def recommend(db: AsyncIOMotorDatabase, business_id: Any) -> dict:
-    from app.services.recommendation_service import generate
+    from app.services.recommendation_service import generate_with_stats
 
-    recs = await generate(db, business_id)
+    recs, stats = await generate_with_stats(db, business_id)
     ctx = await build_context(db, business_id)
     return {
         "generated_at": utcnow(),
         "recommendations": recs,
+        "engine": stats.get("engine", "deterministic"),
+        "summary_bullets": stats.get("summary_bullets", []),
+        "summary_engine": stats.get("summary_engine", "deterministic"),
         "narrative": (
             f"Your financial-health score is {ctx['health']['score']}/100 ({ctx['health']['label']}) "
             f"with {ctx['risk']['summary']['active_risks']} active risk(s). "

@@ -18,6 +18,42 @@ async def test_chat(client):
     assert data["session_id"]
 
 
+async def test_chat_reports_ai_engine_that_produced_the_answer(client, monkeypatch):
+    token, _ = await seed_business(client)
+
+    async def fake_complete_engine(system, user, **options):
+        return "AI CFO answer from Gemini", "gemini"
+
+    monkeypatch.setattr("app.agents.ai_cfo.llm.is_available", lambda: True)
+    monkeypatch.setattr("app.agents.ai_cfo.llm.complete_engine", fake_complete_engine)
+
+    resp = await client.post(
+        "/api/ai-cfo/chat",
+        json={"message": "Summarize my cash-flow risks"},
+        headers=auth(token),
+    )
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["engine"] == "gemini"
+    assert data["message"]["content"] == "AI CFO answer from Gemini"
+
+
+async def test_analyze_uses_ai_first_then_falls_back(client, monkeypatch):
+    token, _ = await seed_business(client)
+
+    async def fake_complete_engine(system, user, **options):
+        return "AI executive narrative.", "openai"
+
+    monkeypatch.setattr("app.agents.ai_cfo.llm.is_available", lambda: True)
+    monkeypatch.setattr("app.agents.ai_cfo.llm.complete_engine", fake_complete_engine)
+
+    resp = await client.post("/api/ai-cfo/analyze", json={}, headers=auth(token))
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["engine"] == "openai"
+    assert data["narrative"] == "AI executive narrative."
+
+
 async def test_chat_continuity_with_session(client):
     token, _ = await seed_business(client)
     first = await client.post(

@@ -1,10 +1,11 @@
-"""Recommendation service — deterministic rules with optional AI narratives.
+"""Recommendation service — AI-first narratives with deterministic safety net.
 
-The configured provider never receives a vague request by itself. We send a user instruction, a
+The configured providers never receive a vague request by themselves. We send a user instruction, a
 calculated analysis spanning every finance section, and the exact schema used by
-the Recommendations screen. Its output is validated and normalised before it
-can be persisted. The trusted deterministic engine remains the fallback when
-the provider is unavailable or returns unusable JSON.
+the Recommendations screen. OpenAI is tried first, Gemini second; generated
+output is validated and normalised before it can be persisted. The trusted
+deterministic engine is used only when no provider is configured, every provider
+attempt fails, or the model returns unusable JSON.
 """
 
 import hashlib
@@ -21,6 +22,7 @@ from app.agents import llm
 from app.core.constants import COLLECTIONS
 from app.core.errors import NotFoundError
 from app.ml.recommendation import generate_recommendations
+from app.schemas.analytics import DEFAULT_RECOMMENDATION_PROMPT
 from app.utils.dates import utcnow
 from app.utils.serialize import serialize_doc, serialize_docs
 
@@ -265,13 +267,13 @@ async def _generate_with_ai(
             "Trusted business data analysis (JSON):\n"
             f"{json.dumps(analysis, default=str)}"
         )
-        text = await llm.complete(
+        text, engine = await llm.complete_engine(
             system, user, max_tokens=4096, temperature=0.1
         )
         parsed = _extract_json_payload(text or "")
         generated = _normalise_ai_recommendations(parsed, business_id, now)
         if generated:
-            return generated, llm.active_provider()
+            return generated, engine or llm.active_provider() or "ai"
         logger.warning("Recommendation model returned no valid display-schema rows")
     except Exception as exc:  # model failures must not break Generate
         logger.warning("AI recommendation generation failed; using trusted fallback: %s", exc)
@@ -315,7 +317,9 @@ async def generate_summary_bullets(
             f"Trusted business data analysis (JSON):\n{json.dumps(analysis, default=str)}"
         )
         try:
-            text = await llm.complete(system, user, max_tokens=2048, temperature=0.2)
+            text, provider = await llm.complete_engine(
+                system, user, max_tokens=2048, temperature=0.2
+            )
             parsed = _extract_json_payload(text or "")
             if isinstance(parsed, dict):
                 raw_bullets = parsed.get("bullets") or []
@@ -328,7 +332,7 @@ async def generate_summary_bullets(
                 if s and len(s) >= 10:
                     bullets.append(s[:500])
             if bullets:
-                engine = llm.active_provider() or "ai"
+                engine = provider or "ai"
         except Exception as exc:
             logger.warning("AI summary bullet generation failed; using deterministic fallback: %s", exc)
 
@@ -450,19 +454,23 @@ async def generate_with_stats(
     The candidates are fully produced and validated before MongoDB is touched.
     Fresh rows are then inserted under a generation id and every older row for
     the business is removed, so the page can only show the latest Generate
-    result.  When ``prompt`` is supplied, an available LLM receives that
-    instruction plus the complete calculated finance analysis and exact display
-    schema. Invalid or unavailable model output automatically falls back to the
-    deterministic candidates.
+    result.  An available LLM always receives the instruction (the caller's
+    ``prompt`` when supplied, otherwise the default instruction) plus the
+    complete calculated finance analysis and exact display schema. Invalid or
+    unavailable model output automatically falls back to the deterministic
+    candidates.
     """
     now = now or utcnow()
     deterministic_recs = await generate_recommendations(db, business_id, now=now)
     recs = deterministic_recs
     ai_engine: Optional[str] = None
-    if prompt and prompt.strip():
-        recs, ai_engine = await _generate_with_ai(
-            db, business_id, prompt.strip(), deterministic_recs, now
-        )
+    effective_prompt = (prompt or "").strip()
+    prompt_applied = bool(effective_prompt)
+    if not prompt_applied:
+        effective_prompt = DEFAULT_RECOMMENDATION_PROMPT
+    recs, ai_engine = await _generate_with_ai(
+        db, business_id, effective_prompt, deterministic_recs, now
+    )
     collection = db[COLLECTIONS["recommendations"]]
     generation_id = str(ObjectId())
     items: list[dict] = []
@@ -522,7 +530,7 @@ async def generate_with_stats(
         "removed": removed_result.deleted_count,
         "total": len(items),
         "engine": ai_engine or "deterministic",
-        "prompt_applied": bool(prompt and prompt.strip()),
+        "prompt_applied": prompt_applied,
         "generation_id": generation_id,
         "summary_bullets": summary_bullets,
         "summary_engine": summary_engine,
