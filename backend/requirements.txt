@@ -1,0 +1,30 @@
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30
+motor>=3.5,<4.0
+pymongo>=4.7,<5.0
+dnspython>=2.6  # required for mongodb+srv:// (MongoDB Atlas) URIs
+pydantic>=2.7,<3.0
+pydantic-settings>=2.3
+email-validator>=2.1
+python-multipart>=0.0.9
+PyJWT>=2.8
+bcrypt>=4.1
+python-dateutil>=2.9
+pandas>=2.2
+numpy>=1.26
+scikit-learn>=1.4
+# Async HTTP client used by provider APIs and the API test-suite (ASGI transport).
+httpx>=0.27
+
+# File import / document processing / PDF reports
+openpyxl>=3.1        # Excel (.xlsx) imports
+xlrd>=2.0            # legacy Excel (.xls) chat attachments
+reportlab>=4.2       # professional PDF report generation
+pypdf>=4.2           # text extraction from PDF documents (OCR pre-processing)
+Pillow>=10.3         # image handling for OCR/document extraction
+pytesseract>=0.3.13  # optional OCR engine (requires the system `tesseract` binary)
+
+# Optional: install for Prophet-based forecasting (heavy; requires a C++ toolchain).
+# The service automatically falls back to scikit-learn when Prophet is unavailable.
+# prophet>=1.1
+# cmdstanpy>=1.2
