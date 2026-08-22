@@ -58,10 +58,10 @@ resource "aws_ssm_parameter" "mongo_app_password" {
 # Pass them with TF_VAR_openai_api_key / TF_VAR_gemini_api_key so they are
 # never written into a file (tfvars files are git-ignored as well).
 resource "aws_ssm_parameter" "openai_api_key" {
-  count   = var.openai_api_key != "" ? 1 : 0
-  name    = "${trimsuffix(var.ssm_path_prefix, "/")}/openai_api_key"
-  type    = "SecureString"
-  value   = var.openai_api_key
+  count     = var.openai_api_key != "" ? 1 : 0
+  name      = "${trimsuffix(var.ssm_path_prefix, "/")}/openai_api_key"
+  type      = "SecureString"
+  value     = var.openai_api_key
   overwrite = true
 
   lifecycle {
